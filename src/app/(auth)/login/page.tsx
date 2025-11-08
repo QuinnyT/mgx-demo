@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,13 +16,18 @@ type AuthMode = 'signin' | 'signup';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const { user, signIn, signUp, loading, initialize, initialized } = useAuthStore();
 
   const [mode, setMode] = useState<AuthMode>('signin');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreePolicy, setAgreePolicy] = useState(false);
+
+  const isSignup = mode === 'signup';
 
   useEffect(() => {
     if (!initialized) {
@@ -31,15 +36,25 @@ export default function LoginPage() {
   }, [initialized, initialize]);
 
   useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const requestedMode = search.get('mode');
+    if (requestedMode === 'signup') {
+      setMode('signup');
+    }
+  }, [location.search]);
+
+  useEffect(() => {
     if (user) {
       navigate('/chat', { replace: true });
     }
   }, [user, navigate]);
 
   const resetForm = () => {
+    setUsername('');
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setAgreePolicy(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +65,12 @@ export default function LoginPage() {
       return;
     }
 
-    if (mode === 'signup') {
+    if (isSignup) {
+      if (!username.trim()) {
+        toast.error(t('auth.messages.usernameRequired', { defaultValue: 'Please choose a username' }));
+        return;
+      }
+
       if (!confirmPassword) {
         toast.error(t('auth.messages.confirmPassword'));
         return;
@@ -65,26 +85,38 @@ export default function LoginPage() {
         toast.error(t('auth.messages.passwordLength'));
         return;
       }
+
+      if (!agreePolicy) {
+        toast.error(t('auth.messages.acceptPolicy', { defaultValue: 'Please agree to the terms to continue' }));
+        return;
+      }
     }
 
     try {
-      if (mode === 'signin') {
-        await signIn(email, password);
-        toast.success(t('auth.messages.signInSuccess'));
-      } else {
+      if (isSignup) {
         await signUp(email, password);
         toast.success(t('auth.messages.signUpSuccess'));
+      } else {
+        await signIn(email, password);
+        toast.success(t('auth.messages.signInSuccess'));
       }
 
       resetForm();
       navigate('/chat', { replace: true });
     } catch (error) {
-      const fallback = mode === 'signin' ? t('auth.messages.signInError') : t('auth.messages.signUpError');
+      const fallback = isSignup ? t('auth.messages.signUpError') : t('auth.messages.signInError');
       if (error instanceof Error && error.message) {
         toast.error(error.message);
       } else {
         toast.error(fallback);
       }
+    }
+  };
+
+  const switchMode = (target: AuthMode) => {
+    setMode(target);
+    if (target === 'signin') {
+      setAgreePolicy(false);
     }
   };
 
@@ -152,12 +184,10 @@ export default function LoginPage() {
         <Card className="border-none bg-white/80 shadow-xl backdrop-blur">
           <CardHeader className="space-y-2 text-center">
             <CardTitle className="text-2xl font-semibold text-slate-900">
-              {mode === 'signin' ? t('auth.dialogTitleSignIn') : t('auth.dialogTitleSignUp')}
+              {isSignup ? t('auth.dialogTitleSignUp') : t('auth.dialogTitleSignIn')}
             </CardTitle>
             <CardDescription className="text-base text-slate-500">
-              {mode === 'signin'
-                ? 'Sign in with Google or your registered account'
-                : 'Create your MGX account to get started'}
+              {isSignup ? t('auth.signupSubtitle', { defaultValue: 'Sign up with Google or email' }) : t('auth.signinSubtitle', { defaultValue: 'Sign in with Google or your registered account' })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -188,22 +218,37 @@ export default function LoginPage() {
                   />
                 </svg>
               </span>
-              {t('auth.google')}
+              {isSignup ? t('auth.signUpWithGoogle', { defaultValue: 'Sign up with Google' }) : t('auth.signInWithGoogle', { defaultValue: 'Sign in with Google' })}
             </Button>
 
             <div className="relative text-center text-sm text-slate-400">
               <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-slate-200" aria-hidden />
-              <span className="relative inline-block bg-white px-3 text-slate-400">or continue with email</span>
+              <span className="relative inline-block bg-white px-3 text-slate-400">
+                {isSignup ? t('auth.signupWithEmail', { defaultValue: 'Or sign up with email' }) : t('auth.signinWithEmail', { defaultValue: 'Or sign in with email' })}
+              </span>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {isSignup && (
+                <div className="space-y-2">
+                  <Label htmlFor="username">{t('auth.username', { defaultValue: 'Username' })}</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder={t('auth.usernamePlaceholder', { defaultValue: 'Enter your username' })}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">{t('auth.email')}</Label>
                 <div className="relative">
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={isSignup ? 'Email: *****@example.com' : 'you@example.com'}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
@@ -223,7 +268,7 @@ export default function LoginPage() {
                   disabled={loading}
                 />
               </div>
-              {mode === 'signup' && (
+              {isSignup && (
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
                   <Input
@@ -237,47 +282,73 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              {isSignup && (
+                <label className="flex items-start gap-2 text-sm text-slate-500">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500"
+                    checked={agreePolicy}
+                    onChange={(e) => setAgreePolicy(e.target.checked)}
+                    disabled={loading}
+                  />
+                  <span>
+                    {t('auth.agreeTo', { defaultValue: 'Agree to our ' })}
+                    <button
+                      type="button"
+                      className="font-medium text-indigo-600 hover:text-indigo-500"
+                      onClick={() => toast.info('Terms coming soon')}
+                    >
+                      {t('auth.terms', { defaultValue: 'Terms' })}
+                    </button>{' '}
+                    {t('auth.and', { defaultValue: 'and' })}{' '}
+                    <button
+                      type="button"
+                      className="font-medium text-indigo-600 hover:text-indigo-500"
+                      onClick={() => toast.info('Privacy policy coming soon')}
+                    >
+                      {t('auth.privacyPolicy', { defaultValue: 'Privacy Policy' })}
+                    </button>
+                  </span>
+                </label>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading || (isSignup && !agreePolicy)}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === 'signin' ? t('auth.signInAction') : t('auth.signUpAction')}
+                {isSignup ? t('auth.continue', { defaultValue: 'Continue' }) : t('auth.signInAction')}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 text-sm text-slate-500">
-            <button
-              type="button"
-              className="self-start transition-colors hover:text-slate-700"
-              onClick={() => toast.info(t('auth.messages.contactAdmin'))}
-            >
-              {t('auth.forgotPassword')}
-            </button>
+            {!isSignup && (
+              <button
+                type="button"
+                className="self-start transition-colors hover:text-slate-700"
+                onClick={() => toast.info(t('auth.messages.contactAdmin'))}
+              >
+                {t('auth.forgotPassword')}
+              </button>
+            )}
             <div className="text-center text-sm text-slate-500">
-              {mode === 'signin' ? (
+              {isSignup ? (
                 <>
-                  {t('auth.dialogTitleSignUp')}
+                  {t('auth.haveAccount', { defaultValue: 'Already have an account?' })}
                   <button
                     type="button"
                     className="ml-1 font-medium text-indigo-600 hover:text-indigo-500"
-                    onClick={() => {
-                      setMode('signup');
-                      setConfirmPassword('');
-                    }}
+                    onClick={() => switchMode('signin')}
                   >
-                    {t('auth.switchToSignUp')}
+                    {t('auth.signInNow', { defaultValue: 'Sign in now' })}
                   </button>
                 </>
               ) : (
                 <>
-                  {t('auth.dialogTitleSignIn')}
+                  {t('auth.needAccount', { defaultValue: "Don't have an account?" })}
                   <button
                     type="button"
                     className="ml-1 font-medium text-indigo-600 hover:text-indigo-500"
-                    onClick={() => {
-                      setMode('signin');
-                      setConfirmPassword('');
-                    }}
+                    onClick={() => switchMode('signup')}
                   >
-                    {t('auth.switchToSignIn')}
+                    {t('auth.switchToSignUp')}
                   </button>
                 </>
               )}
