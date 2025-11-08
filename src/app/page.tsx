@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useProjectStore } from '@/lib/store/project-store';
 import Header from '@/components/layout/Header';
@@ -15,7 +15,7 @@ import { Plus, Loader2, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function HomePage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { user, initialize, initialized } = useAuthStore();
   const { projects, loading, fetchProjects, createProject } = useProjectStore();
   
@@ -32,9 +32,9 @@ export default function HomePage() {
 
   useEffect(() => {
     if (initialized && !user) {
-      router.push('/login');
+      navigate('/login');
     }
-  }, [user, initialized, router]);
+  }, [user, initialized, navigate]);
 
   useEffect(() => {
     if (user) {
