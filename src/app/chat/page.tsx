@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useChatStore } from '@/lib/store/chat-store';
 import Header from '@/components/layout/Header';
@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function ChatPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { user, initialize, initialized } = useAuthStore();
   const {
     conversations,
@@ -44,9 +44,9 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (initialized && !user) {
-      router.push('/login');
+      navigate('/login', { replace: true });
     }
-  }, [user, initialized, router]);
+  }, [user, initialized, navigate]);
 
   useEffect(() => {
     if (user) {
