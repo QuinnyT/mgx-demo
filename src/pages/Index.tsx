@@ -6,6 +6,8 @@ import {
   BadgeCheck,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Globe2,
   Languages,
   Loader2,
@@ -45,6 +47,7 @@ export default function IndexPage() {
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ recents: true, pinned: true });
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (!initialized) {
@@ -185,67 +188,129 @@ export default function IndexPage() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden w-72 flex-shrink-0 flex-col border-r border-slate-200/60 bg-white/75 backdrop-blur md:flex">
-          <div className="p-4">
-            <Button className="w-full justify-start gap-2 bg-gradient-to-r from-[#805bff] to-[#4f46e5] text-white hover:from-[#6f4de4] hover:to-[#3d3ac7]">
-              <Sparkles className="h-4 w-4" />
-              {t('sidebar.newChat')}
+        <aside 
+          className={cn(
+            "hidden flex-shrink-0 flex-col border-r border-slate-200/60 bg-white/75 backdrop-blur transition-all duration-300 md:flex",
+            sidebarCollapsed ? "w-16" : "w-72"
+          )}
+        >
+          {/* Toggle Button */}
+          <div className="flex items-center justify-end p-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-slate-600 hover:text-slate-900"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            >
+              {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
-          </div>
-          <div className="px-4">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sm text-slate-600 hover:text-slate-900">
-              <Globe2 className="h-4 w-4" />
-              {t('sidebar.appWorld')}
-            </Button>
-          </div>
-          <div className="mt-6 px-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {t('sidebar.myChats')}
           </div>
 
-          <ScrollArea className="mt-2 flex-1 px-2">
-            <div className="space-y-3">
-              {conversationSections.map((section) => (
-                <Collapsible
-                  key={section.key}
-                  open={openSections[section.key]}
-                  onOpenChange={(value) => setOpenSections((prev) => ({ ...prev, [section.key]: value }))}
-                  className="rounded-xl border border-transparent hover:border-slate-200"
-                >
-                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50">
-                    <span>{section.title}</span>
-                    <ChevronDown
-                      className={cn('h-4 w-4 transition-transform', openSections[section.key] ? 'rotate-180' : 'rotate-0')}
-                    />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-1 px-2 pb-3">
-                    {section.items.map((item, index) => (
-                      <button
-                        key={`${section.key}-${index}`}
-                        type="button"
-                        className="flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100"
-                      >
-                        <span className="font-medium">{item}</span>
-                        <span className="text-xs text-slate-400">Claude · 2 min ago</span>
-                      </button>
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
-              ))}
+          {/* New Chat Button */}
+          <div className="px-2 pb-4">
+            <Button 
+              className={cn(
+                "w-full gap-2 bg-gradient-to-r from-[#805bff] to-[#4f46e5] text-white hover:from-[#6f4de4] hover:to-[#3d3ac7]",
+                sidebarCollapsed ? "justify-center px-2" : "justify-start"
+              )}
+            >
+              <Sparkles className="h-4 w-4 flex-shrink-0" />
+              {!sidebarCollapsed && t('sidebar.newChat')}
+            </Button>
+          </div>
+
+          {/* Go to App World Button */}
+          {!sidebarCollapsed && (
+            <div className="px-4">
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sm text-slate-600 hover:text-slate-900">
+                <Globe2 className="h-4 w-4" />
+                {t('sidebar.appWorld')}
+              </Button>
             </div>
-          </ScrollArea>
+          )}
 
-          <div className="border-t border-slate-200/70 p-4">
-            <Card className="border-none bg-slate-900 text-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{t('sidebar.credits')}</CardTitle>
-                <CardDescription className="text-xs text-slate-300">331.54 {t('sidebar.credits')}</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Button size="sm" className="w-full bg-white text-slate-900 hover:bg-slate-100">
-                  {t('sidebar.upgrade')}
+          {sidebarCollapsed && (
+            <div className="px-2">
+              <Button variant="ghost" size="icon" className="w-full text-slate-600 hover:text-slate-900">
+                <Globe2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* My Chats Section */}
+          {!sidebarCollapsed && (
+            <>
+              <div className="mt-6 px-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t('sidebar.myChats')}
+              </div>
+
+              <ScrollArea className="mt-2 flex-1 px-2">
+                <div className="space-y-3">
+                  {conversationSections.map((section) => (
+                    <Collapsible
+                      key={section.key}
+                      open={openSections[section.key]}
+                      onOpenChange={(value) => setOpenSections((prev) => ({ ...prev, [section.key]: value }))}
+                      className="rounded-xl border border-transparent hover:border-slate-200"
+                    >
+                      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50">
+                        <span>{section.title}</span>
+                        <ChevronDown
+                          className={cn('h-4 w-4 transition-transform', openSections[section.key] ? 'rotate-180' : 'rotate-0')}
+                        />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-1 px-2 pb-3">
+                        {section.items.map((item, index) => (
+                          <button
+                            key={`${section.key}-${index}`}
+                            type="button"
+                            className="flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100"
+                          >
+                            <span className="font-medium">{item}</span>
+                            <span className="text-xs text-slate-400">Claude · 2 min ago</span>
+                          </button>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                </div>
+              </ScrollArea>
+            </>
+          )}
+
+          {/* Collapsed My Chats Icon */}
+          {sidebarCollapsed && (
+            <div className="mt-6 flex flex-1 flex-col items-center gap-2 px-2">
+              <Button variant="ghost" size="icon" className="w-full text-slate-600 hover:text-slate-900">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Credits Card */}
+          <div className={cn("border-t border-slate-200/70", sidebarCollapsed ? "p-2" : "p-4")}>
+            {!sidebarCollapsed ? (
+              <Card className="border-none bg-slate-900 text-white">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{t('sidebar.credits')}</CardTitle>
+                  <CardDescription className="text-xs text-slate-300">331.54 {t('sidebar.credits')}</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Button size="sm" className="w-full bg-white text-slate-900 hover:bg-slate-100">
+                    {t('sidebar.upgrade')}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                  331
+                </div>
+                <Button size="icon" className="h-8 w-8 bg-slate-900 text-white hover:bg-slate-800">
+                  <ArrowRight className="h-3 w-3" />
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            )}
           </div>
         </aside>
 
