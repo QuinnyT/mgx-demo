@@ -3,13 +3,17 @@ import type { Session } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@/types';
 
+type SignupMetadata = {
+  username?: string;
+};
+
 interface AuthState {
   user: User | null;
   session: Session | null;
   loading: boolean;
   initialized: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata?: SignupMetadata) => Promise<void>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
 }
@@ -63,13 +67,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  signUp: async (email: string, password: string) => {
+  signUp: async (email: string, password: string, metadata?: SignupMetadata) => {
     set({ loading: true });
     try {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: metadata,
+        },
       });
 
       if (error) throw error;

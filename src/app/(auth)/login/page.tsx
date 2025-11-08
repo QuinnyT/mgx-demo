@@ -94,7 +94,9 @@ export default function LoginPage() {
 
     try {
       if (isSignup) {
-        await signUp(email, password);
+        await signUp(email, password, {
+          username: username.trim(),
+        });
         toast.success(t('auth.messages.signUpSuccess'));
       } else {
         await signIn(email, password);
