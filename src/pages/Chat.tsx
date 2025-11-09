@@ -104,7 +104,7 @@ export default function ChatPage() {
         setIsSending(true);
         setIsGenerating(true);
         try {
-          toast.info('正在生成项目，请稍候...');
+          toast.info('正在生成项目,请稍候...');
           const version = await generateProject(prompt);
           setGeneratedProject(version);
           setActiveVersionId(version.id);
@@ -389,16 +389,17 @@ ${scripts}
         </aside>
 
         <main className="flex-1 overflow-hidden flex">
-          <div className="flex flex-1 gap-4 p-4 overflow-hidden">
-            {/* Chat Area */}
-            <Card className="flex-[3] flex flex-col overflow-hidden">
+          {/* 关键修复：给整个内容区域设置固定高度 */}
+          <div className="flex flex-1 gap-4 p-4 h-[calc(100vh-4rem)]">
+            {/* Chat Area - 添加固定高度 */}
+            <Card className="flex-[3] h-full flex flex-col overflow-hidden">
               {currentConversation ? (
                 <>
                   <div className="p-4 border-b flex-shrink-0">
                     <h2 className="font-semibold">{currentConversation.title}</h2>
                   </div>
 
-                  {/* 修复：添加固定高度和滚动 */}
+                  {/* 消息区域 - 使用 flex-1 填充剩余空间 */}
                   <div className="flex-1 overflow-hidden">
                     <ScrollArea className="h-full">
                       <div className="p-4">
@@ -478,8 +479,8 @@ ${scripts}
               )}
             </Card>
 
-            {/* Preview Area - 整体可滚动 */}
-            <Card className="flex-[5] flex flex-col overflow-hidden">
+            {/* Preview Area - 添加固定高度 */}
+            <Card className="flex-[5] h-full flex flex-col overflow-hidden">
               <div className="border-b p-4 flex items-center justify-between flex-shrink-0">
                 <div>
                   <h2 className="font-semibold text-slate-800">Project Preview</h2>
