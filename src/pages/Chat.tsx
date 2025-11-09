@@ -353,7 +353,7 @@ ${scripts}
                 </div>
 
                 <ScrollArea className="flex-1 p-4">
-                  {messages.length === 0 ? (
+                  {messages.length === 0 && !isSending ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
@@ -380,6 +380,17 @@ ${scripts}
                           </div>
                         </div>
                       ))}
+                      {/* Generating Loading Placeholder */}
+                      {isSending && (
+                        <div className="flex justify-start">
+                          <div className="max-w-[70%] rounded-lg p-3 bg-muted">
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              <p className="text-sm text-muted-foreground">Generating...</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <div ref={messagesEndRef} />
                     </div>
                   )}
@@ -512,6 +523,14 @@ ${scripts}
                       <p className="text-sm text-muted-foreground">Select a file to inspect the generated code.</p>
                     )}
                   </div>
+                </div>
+              </div>
+            ) : isSending ? (
+              <div className="flex flex-1 items-center justify-center p-6">
+                <div className="text-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                  <p className="text-sm font-medium text-slate-700">Generating project...</p>
+                  <p className="text-xs text-muted-foreground mt-2">This may take a few moments</p>
                 </div>
               </div>
             ) : (

@@ -58,7 +58,14 @@ export default function IndexPage() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user, initialize, initialized, signOut } = useAuthStore();
-  const { createConversation, sendMessage, setCurrentConversation } = useChatStore();
+  const { 
+    conversations, 
+    loading: conversationsLoading,
+    fetchConversations,
+    createConversation, 
+    sendMessage, 
+    setCurrentConversation 
+  } = useChatStore();
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ recents: true, pinned: true });
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
@@ -74,11 +81,12 @@ export default function IndexPage() {
     }
   }, [initialized, initialize]);
 
-  // useEffect(() => {
-  //   if (user) {
-  //     navigate('/chat');
-  //   }
-  // }, [user, navigate]);
+  // 获取真实对话列表
+  useEffect(() => {
+    if (user) {
+      fetchConversations();
+    }
+  }, [user, fetchConversations]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -99,26 +107,30 @@ export default function IndexPage() {
     };
   }, [i18n]);
 
-  const sampleChats = useMemo(() => {
-    const chats = t('sidebar.sampleChats') as unknown;
-    return Array.isArray(chats) ? (chats as string[]) : [];
-  }, [t]);
+  // 使用真实对话数据替代示例数据
+  const conversationSections = useMemo(() => {
+    // 将对话按时间排序，最新的在前
+    const sortedConversations = [...conversations].sort(
+      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    );
 
-  const conversationSections = useMemo(
-    () => [
+    // 分为最近对话和其他对话
+    const recentConversations = sortedConversations.slice(0, 5);
+    const olderConversations = sortedConversations.slice(5);
+
+    return [
       {
         key: 'recents',
         title: t('sidebar.recents'),
-        items: sampleChats.slice(0, 3),
+        items: recentConversations,
       },
       {
-        key: 'pinned',
+        key: 'older',
         title: t('sidebar.pinned'),
-        items: sampleChats.slice(3),
+        items: olderConversations,
       },
-    ],
-    [sampleChats, t],
-  );
+    ];
+  }, [conversations, t]);
 
   const handleLanguageChange = (code: string) => {
     i18n.changeLanguage(code);
@@ -173,6 +185,14 @@ export default function IndexPage() {
       console.error('Error in handlePromptSubmit:', error);
     } finally {
       setPromptSubmitting(false);
+    }
+  };
+
+  const handleConversationClick = (conversationId: string) => {
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (conversation) {
+      setCurrentConversation(conversation);
+      navigate(`/chat?conversation=${conversationId}`);
     }
   };
 
@@ -391,35 +411,50 @@ export default function IndexPage() {
 
               {/* Conversations List */}
               <ScrollArea className="mt-2 flex-1 px-2">
-                <div className="space-y-3">
-                  {conversationSections.map((section) => (
-                    <Collapsible
-                      key={section.key}
-                      open={openSections[section.key]}
-                      onOpenChange={(value) => setOpenSections((prev) => ({ ...prev, [section.key]: value }))}
-                      className="rounded-xl border border-transparent hover:border-slate-200"
-                    >
-                      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50">
-                        <span>{section.title}</span>
-                        <ChevronDown
-                          className={cn('h-4 w-4 transition-transform', openSections[section.key] ? 'rotate-180' : 'rotate-0')}
-                        />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="space-y-1 px-2 pb-3">
-                        {section.items.map((item, index) => (
-                          <button
-                            key={`${section.key}-${index}`}
-                            type="button"
-                            className="flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100"
-                          >
-                            <span className="font-medium">{item}</span>
-                            <span className="text-xs text-slate-400">Claude · 2 min ago</span>
-                          </button>
-                        ))}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ))}
-                </div>
+                {conversationsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-slate-400">
+                    No conversations yet
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {conversationSections.map((section) => (
+                      section.items.length > 0 && (
+                        <Collapsible
+                          key={section.key}
+                          open={openSections[section.key]}
+                          onOpenChange={(value) => setOpenSections((prev) => ({ ...prev, [section.key]: value }))}
+                          className="rounded-xl border border-transparent hover:border-slate-200"
+                        >
+                          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50">
+                            <span>{section.title}</span>
+                            <ChevronDown
+                              className={cn('h-4 w-4 transition-transform', openSections[section.key] ? 'rotate-180' : 'rotate-0')}
+                            />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-1 px-2 pb-3">
+                            {section.items.map((conversation) => (
+                              <button
+                                key={conversation.id}
+                                type="button"
+                                onClick={() => handleConversationClick(conversation.id)}
+                                className="flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100"
+                              >
+                                <span className="font-medium truncate">{conversation.title}</span>
+                                <span className="text-xs text-slate-400">
+                                  {new Date(conversation.updated_at).toLocaleDateString()}
+                                </span>
+                              </button>
+                            ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )
+                    ))}
+                  </div>
+                )}
               </ScrollArea>
 
               {/* Credits Card */}
