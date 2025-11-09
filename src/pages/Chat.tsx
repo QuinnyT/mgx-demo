@@ -48,6 +48,7 @@ export default function ChatPage() {
   const [newConversationTitle, setNewConversationTitle] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false); // 新增：区分发送消息和生成项目的状态
   const [generatedProject, setGeneratedProject] = useState<GeneratedProjectVersion | null>(null);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
@@ -83,7 +84,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isGenerating]); // 添加 isGenerating 依赖，确保 Generating 出现时也滚动
 
   useEffect(() => {
     if (conversationId) {
@@ -103,6 +104,7 @@ export default function ChatPage() {
       // 自动调用大模型 API 生成项目
       const autoGenerateProject = async () => {
         setIsSending(true);
+        setIsGenerating(true);
         try {
           toast.info('正在生成项目，请稍候...');
           const version = await generateProject(prompt);
@@ -121,6 +123,7 @@ export default function ChatPage() {
           console.error('Auto generate project error:', error);
         } finally {
           setIsSending(false);
+          setIsGenerating(false);
         }
       };
 
@@ -183,17 +186,24 @@ export default function ChatPage() {
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !currentConversation) return;
 
-    setIsSending(true);
     const prompt = messageInput.trim();
+    setMessageInput(''); // 立即清空输入框
+    setIsSending(true);
+    
     try {
+      // 先发送用户消息
       await sendMessage(prompt);
-      setMessageInput('');
-
+      
+      // 用户消息发送成功后，再显示 Generating 状态
+      setIsGenerating(true);
+      
+      // 生成项目
       const version = await generateProject(prompt);
       setGeneratedProject(version);
       setActiveVersionId(version.id);
       setSelectedFileIndex(0);
 
+      // 发送 AI 回复
       if (version.summary) {
         await sendMessage(version.summary, 'assistant');
       }
@@ -203,6 +213,7 @@ export default function ChatPage() {
       console.error(error);
     } finally {
       setIsSending(false);
+      setIsGenerating(false);
     }
   };
 
@@ -372,7 +383,7 @@ ${scripts}
                 </div>
 
                 <ScrollArea className="flex-1 p-4">
-                  {messages.length === 0 && !isSending ? (
+                  {messages.length === 0 && !isGenerating ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
@@ -399,8 +410,8 @@ ${scripts}
                           </div>
                         </div>
                       ))}
-                      {/* Generating Loading Placeholder */}
-                      {isSending && (
+                      {/* Generating Loading Placeholder - 只在用户消息发送后显示 */}
+                      {isGenerating && (
                         <div className="flex justify-start">
                           <div className="max-w-[70%] rounded-lg p-3 bg-muted">
                             <div className="flex items-center gap-2">
