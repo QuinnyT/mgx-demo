@@ -48,7 +48,6 @@ export default function ChatPage() {
   const [newConversationTitle, setNewConversationTitle] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
   const [generatedProject, setGeneratedProject] = useState<GeneratedProjectVersion | null>(null);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
@@ -254,24 +253,21 @@ ${scripts}
 
   const selectedFile = generatedProject?.files[selectedFileIndex];
 
-  const handleRestoreVersion = async (version: GeneratedProjectVersion) => {
+  // 修复后的 Restore 功能：只切换版本显示，不修改数据库
+  const handleRestoreVersion = (version: GeneratedProjectVersion) => {
     if (!currentConversation) return;
 
-    setIsRestoring(true);
     try {
-      const updated = await updateProjectVersion(version.id, currentConversation.id, {
-        summary: version.summary,
-        files: version.files,
-      });
-
-      setActiveVersionId(updated.id);
-      toast.success('Version restored');
+      // 切换到选中的版本
+      setActiveVersionId(version.id);
+      setGeneratedProject(version);
+      setSelectedFileIndex(0);
+      
+      toast.success(`Restored to version ${version.id.slice(0, 8)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to restore version';
       toast.error(message);
       console.error(error);
-    } finally {
-      setIsRestoring(false);
     }
   };
 
@@ -489,19 +485,20 @@ ${scripts}
                                 variant={isActive ? 'default' : 'ghost'}
                                 size="sm"
                                 className="flex-1 justify-start"
-                                onClick={() => setActiveVersionId(version.id)}
+                                onClick={() => handleRestoreVersion(version)}
                               >
                                 <span className="font-medium">v{versionNumber}</span>
                                 <span className="ml-2 text-xs opacity-60">{createdAt}</span>
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRestoreVersion(version)}
-                                disabled={isRestoring}
-                              >
-                                Restore
-                              </Button>
+                              {!isActive && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRestoreVersion(version)}
+                                >
+                                  Restore
+                                </Button>
+                              )}
                             </div>
                           );
                         })}
