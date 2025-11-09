@@ -18,7 +18,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { user, signIn, signUp, loading, initialize, initialized } = useAuthStore();
+  const { user, signIn, signUp, signInWithGoogle, loading, initialize, initialized } = useAuthStore();
 
   const [mode, setMode] = useState<AuthMode>('signin');
   const [username, setUsername] = useState('');
@@ -55,6 +55,20 @@ export default function LoginPage() {
     setPassword('');
     setConfirmPassword('');
     setAgreePolicy(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      // Note: The user will be redirected to Google's OAuth page
+      // After successful authentication, they'll be redirected back to /chat
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(t('auth.messages.googleSignInError', { defaultValue: 'Failed to sign in with Google' }));
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -156,7 +170,7 @@ export default function LoginPage() {
           <div className="relative flex flex-wrap items-end justify-center gap-4">
             <div className="h-36 w-36 rounded-full bg-white/80 shadow-xl backdrop-blur">
               <img
-                src="https://cdn.jsdelivr.net/gh/leerob/static@main/misc/mgx-team-character-1.png"
+                src="/images/MGXAICharacter.jpg"
                 alt="MGX AI Character 1"
                 loading="lazy"
                 className="h-full w-full object-contain p-4"
@@ -164,7 +178,7 @@ export default function LoginPage() {
             </div>
             <div className="h-32 w-32 -translate-y-6 rounded-full bg-white/80 shadow-xl backdrop-blur">
               <img
-                src="https://cdn.jsdelivr.net/gh/leerob/static@main/misc/mgx-team-character-2.png"
+                src="/images/photo1762701759.jpg"
                 alt="MGX AI Character 2"
                 loading="lazy"
                 className="h-full w-full object-contain p-4"
@@ -172,7 +186,7 @@ export default function LoginPage() {
             </div>
             <div className="h-36 w-36 rounded-full bg-white/80 shadow-xl backdrop-blur">
               <img
-                src="https://cdn.jsdelivr.net/gh/leerob/static@main/misc/mgx-team-character-3.png"
+                src="/images/photo1762701760.jpg"
                 alt="MGX AI Character 3"
                 loading="lazy"
                 className="h-full w-full object-contain p-4"
@@ -199,7 +213,7 @@ export default function LoginPage() {
               type="button"
               variant="outline"
               className="w-full justify-center gap-3 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-              onClick={() => toast.info(t('auth.messages.googleNotReady'))}
+              onClick={handleGoogleSignIn}
               disabled={loading}
             >
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-inner">
@@ -222,6 +236,7 @@ export default function LoginPage() {
                   />
                 </svg>
               </span>
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {isSignup
                 ? t('auth.signUpWithGoogle', { defaultValue: 'Sign up with Google' })
                 : t('auth.signInWithGoogle', { defaultValue: 'Sign in with Google' })}

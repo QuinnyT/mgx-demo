@@ -1,47 +1,34 @@
 import { create } from 'zustand';
-import type { Session } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
-import type { User } from '@/types';
-
-type SignupMetadata = {
-  username?: string;
-};
+import type { User } from '@supabase/supabase-js';
 
 interface AuthState {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   initialized: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata?: SignupMetadata) => Promise<void>;
-  signOut: () => Promise<void>;
   initialize: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata?: { username?: string }) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+  setUser: (user: User | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  session: null,
   loading: false,
   initialized: false,
 
   initialize: async () => {
     const supabase = createClient();
+    
+    // Get initial session
+    const { data: { session } } = await supabase.auth.getSession();
+    set({ user: session?.user ?? null, initialized: true });
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    set({
-      user: session?.user as User | null,
-      session,
-      initialized: true,
-    });
-
+    // Listen for auth changes
     supabase.auth.onAuthStateChange((_event, session) => {
-      set({
-        user: session?.user as User | null,
-        session,
-      });
+      set({ user: session?.user ?? null });
     });
   },
 
@@ -55,19 +42,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       if (error) throw error;
-
-      set({
-        user: data.user as User,
-        session: data.session,
-        loading: false,
-      });
+      set({ user: data.user });
     } catch (error) {
-      set({ loading: false });
       throw error;
+    } finally {
+      set({ loading: false });
     }
   },
 
-  signUp: async (email: string, password: string, metadata?: SignupMetadata) => {
+  signUp: async (email: string, password: string, metadata?: { username?: string }) => {
     set({ loading: true });
     try {
       const supabase = createClient();
@@ -80,12 +63,26 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       if (error) throw error;
+      set({ user: data.user });
+    } catch (error) {
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
 
-      set({
-        user: data.user as User,
-        session: data.session,
-        loading: false,
+  signInWithGoogle: async () => {
+    set({ loading: true });
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/chat`,
+        },
       });
+
+      if (error) throw error;
     } catch (error) {
       set({ loading: false });
       throw error;
@@ -97,18 +94,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.signOut();
-
       if (error) throw error;
-
-      set({
-        user: null,
-        session: null,
-        loading: false,
-      });
+      set({ user: null });
     } catch (error) {
-      set({ loading: false });
       throw error;
+    } finally {
+      set({ loading: false });
     }
   },
-}));
 
+  setUser: (user: User | null) => set({ user }),
+}));
