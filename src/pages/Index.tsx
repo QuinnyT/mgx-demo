@@ -58,7 +58,7 @@ export default function IndexPage() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user, initialize, initialized, signOut } = useAuthStore();
-  const { createConversation, sendMessage, setCurrentConversation, fetchMessages } = useChatStore();
+  const { createConversation, sendMessage, setCurrentConversation, fetchMessages, generateProject } = useChatStore();
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ recents: true, pinned: true });
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
@@ -152,15 +152,34 @@ export default function IndexPage() {
     try {
       setPromptSubmitting(true);
       const truncatedTitle = value.length > 60 ? `${value.slice(0, 57)}...` : value;
+      
+      // Create conversation
       const conversation = await createConversation(truncatedTitle);
+      
+      // Send user message
       await sendMessage(value, 'user');
+      
+      // Generate project with AI
+      const version = await generateProject(value);
+      
+      // Send AI response with summary
+      if (version.summary) {
+        await sendMessage(version.summary, 'assistant');
+      }
+      
+      // Fetch all messages to sync
       await fetchMessages(conversation.id);
+      
+      // Set current conversation and navigate
       setCurrentConversation(conversation);
       navigate(`/chat?conversation=${conversation.id}`);
       setPrompt('');
+      
+      toast.success('Project generated successfully!');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to start conversation';
       toast.error(message);
+      console.error('Error in handlePromptSubmit:', error);
     } finally {
       setPromptSubmitting(false);
     }
@@ -175,7 +194,7 @@ export default function IndexPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-[#f6f3ff] via-white to-[#f4f6ff] text-slate-900">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-[#f8f5ff] via-white to-[#f1f5ff] text-slate-900">
       <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
         <DialogContent className="max-w-sm text-center">
           <DialogHeader>
