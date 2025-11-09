@@ -11,6 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -257,15 +264,18 @@ ${scripts}
 
   const selectedFile = generatedProject?.files[selectedFileIndex];
 
-  const handleRestoreVersion = (version: GeneratedProjectVersion) => {
+  const handleRestoreVersion = (versionId: string) => {
     if (!currentConversation) return;
+
+    const version = versions.find((v) => v.id === versionId);
+    if (!version) return;
 
     try {
       setActiveVersionId(version.id);
       setGeneratedProject(version);
       setSelectedFileIndex(0);
       
-      toast.success(`Restored to version ${version.id.slice(0, 8)}`);
+      toast.success(`Switched to version ${version.id.slice(0, 8)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to restore version';
       toast.error(message);
@@ -479,7 +489,7 @@ ${scripts}
               )}
             </Card>
 
-            {/* Preview Area - 添加固定高度 */}
+            {/* Preview Area - 重新布局 */}
             <Card className="flex-[5] h-full flex flex-col overflow-hidden">
               <div className="border-b p-4 flex items-center justify-between flex-shrink-0">
                 <div>
@@ -497,78 +507,40 @@ ${scripts}
               </div>
               
               {generatedProject ? (
-                <ScrollArea className="flex-1">
-                  <div className="flex flex-col">
-                    {/* Summary - 可滚动 */}
-                    <div className="border-b p-4">
-                      <h3 className="text-sm font-semibold text-slate-700 mb-2">Summary</h3>
-                      <p className="text-sm text-slate-600 whitespace-pre-wrap">
-                        {generatedProject.summary || 'The assistant did not provide a summary.'}
-                      </p>
-                    </div>
-                    
-                    {/* Versions - 可滚动 */}
-                    <div className="border-b px-4 py-3">
-                      <h3 className="text-sm font-semibold text-slate-700 mb-2">Versions</h3>
-                      {versions.length > 0 ? (
-                        <div className="space-y-2">
-                          {versions.map((version, index) => {
-                            const versionNumber = versions.length - index;
-                            const isActive = version.id === activeVersionId;
-                            const createdAt = new Date(version.created_at).toLocaleString();
-                            return (
-                              <div key={version.id} className="flex items-center gap-2">
-                                <Button
-                                  variant={isActive ? 'default' : 'ghost'}
-                                  size="sm"
-                                  className="flex-1 justify-start"
-                                  onClick={() => handleRestoreVersion(version)}
-                                >
-                                  <span className="font-medium">v{versionNumber}</span>
-                                  <span className="ml-2 text-xs opacity-60">{createdAt}</span>
-                                </Button>
-                                {!isActive && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRestoreVersion(version)}
-                                  >
-                                    Restore
-                                  </Button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">No versions yet.</p>
-                      )}
-                    </div>
-                    
-                    {/* 视图切换栏 */}
-                    <div className="border-b px-4 py-2 flex items-center gap-2 bg-slate-50 sticky top-0 z-10">
-                      <Button
-                        variant={viewMode === 'preview' ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setViewMode('preview')}
-                        className="gap-2"
-                      >
-                        <Monitor className="h-4 w-4" />
-                        Preview
-                      </Button>
-                      <Button
-                        variant={viewMode === 'code' ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setViewMode('code')}
-                        className="gap-2"
-                      >
-                        <Code className="h-4 w-4" />
-                        Code
-                      </Button>
-                    </div>
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {/* Summary - 固定在顶部 */}
+                  <div className="border-b p-4 flex-shrink-0">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-2">Summary</h3>
+                    <p className="text-sm text-slate-600 whitespace-pre-wrap line-clamp-3">
+                      {generatedProject.summary || 'The assistant did not provide a summary.'}
+                    </p>
+                  </div>
+                  
+                  {/* 视图切换栏 - 固定 */}
+                  <div className="border-b px-4 py-2 flex items-center gap-2 bg-slate-50 flex-shrink-0">
+                    <Button
+                      variant={viewMode === 'preview' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('preview')}
+                      className="gap-2"
+                    >
+                      <Monitor className="h-4 w-4" />
+                      Preview
+                    </Button>
+                    <Button
+                      variant={viewMode === 'code' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('code')}
+                      className="gap-2"
+                    >
+                      <Code className="h-4 w-4" />
+                      Code
+                    </Button>
+                  </div>
 
-                    {/* Preview/Code Content - 可滚动 */}
-                    <div className="min-h-[400px]">
+                  {/* Preview/Code Content - 占据大部分空间，可滚动 */}
+                  <div className="flex-1 overflow-hidden">
+                    <ScrollArea className="h-full">
                       {viewMode === 'preview' ? (
                         previewDocument ? (
                           <div className="p-4">
@@ -576,18 +548,18 @@ ${scripts}
                               key={currentConversation?.id}
                               title="Project Preview"
                               srcDoc={previewDocument}
-                              className="w-full h-[600px] border rounded-lg"
+                              className="w-full h-[calc(100vh-28rem)] border rounded-lg"
                               sandbox="allow-scripts allow-same-origin"
                             />
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center h-[400px] text-sm text-muted-foreground">
+                          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
                             No HTML preview available for this project.
                           </div>
                         )
                       ) : (
-                        <div className="flex flex-col">
-                          <div className="flex flex-wrap gap-2 border-b px-4 py-3 bg-slate-50 sticky top-[52px] z-10">
+                        <div className="flex flex-col h-full">
+                          <div className="flex flex-wrap gap-2 border-b px-4 py-3 bg-slate-50 sticky top-0 z-10">
                             {generatedProject.files.map((file, index) => (
                               <Button
                                 key={`${file.name}-${index}`}
@@ -610,9 +582,35 @@ ${scripts}
                           </div>
                         </div>
                       )}
-                    </div>
+                    </ScrollArea>
                   </div>
-                </ScrollArea>
+                  
+                  {/* Versions - 固定在底部，使用下拉框 */}
+                  <div className="border-t px-4 py-3 flex items-center gap-3 bg-slate-50 flex-shrink-0">
+                    <Label htmlFor="version-select" className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+                      Version:
+                    </Label>
+                    <Select value={activeVersionId || undefined} onValueChange={handleRestoreVersion}>
+                      <SelectTrigger id="version-select" className="flex-1">
+                        <SelectValue placeholder="Select a version" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {versions.map((version, index) => {
+                          const versionNumber = versions.length - index;
+                          const createdAt = new Date(version.created_at).toLocaleString();
+                          return (
+                            <SelectItem key={version.id} value={version.id}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">v{versionNumber}</span>
+                                <span className="text-xs opacity-60">{createdAt}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               ) : isSending ? (
                 <div className="flex flex-1 items-center justify-center p-6">
                   <div className="text-center">
