@@ -197,3 +197,7 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Theme Configuration
+
+This project uses Tailwind CSS with CSS variables defined inside `src/index.css` to control the design system colors. Update the values under `:root` (light theme) and `.dark` (dark theme) to change the primary, secondary, accent and background colors. After editing `index.css`, any component that uses the existing Tailwind color tokens (such as `bg-primary`, `text-accent`, etc.) will automatically reflect the new theme.

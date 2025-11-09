@@ -113,16 +113,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       if (!user) throw new Error('User not authenticated');
 
-      const { error } = await supabase.from('messages').insert([
-        {
-          conversation_id: currentConversation.id,
-          user_id: user.id,
-          content,
-          role,
-        },
-      ]);
+      const { data, error } = await supabase
+        .from('messages')
+        .insert([
+          {
+            conversation_id: currentConversation.id,
+            user_id: user.id,
+            content,
+            role,
+          },
+        ])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      set((state) => ({
+        messages: state.messages.some((message) => message.id === data.id)
+          ? state.messages
+          : [...state.messages, data],
+        conversations: state.conversations.map((conversation) =>
+          conversation.id === currentConversation.id
+            ? { ...conversation, updated_at: data.created_at }
+            : conversation
+        ),
+      }));
     } catch (error) {
       console.error('Error sending message:', error);
       throw error;
@@ -143,9 +158,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          set((state) => ({
-            messages: [...state.messages, payload.new as Message],
-          }));
+          set((state) => {
+            const incoming = payload.new as Message;
+            const alreadyExists = state.messages.some((message) => message.id === incoming.id);
+
+            if (alreadyExists) {
+              return state;
+            }
+
+            return {
+              messages: [...state.messages, incoming],
+              conversations: state.conversations.map((conversation) =>
+                conversation.id === conversationId
+                  ? { ...conversation, updated_at: incoming.created_at }
+                  : conversation
+              ),
+            };
+          });
         }
       )
       .subscribe();
