@@ -75,10 +75,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true });
     try {
       const supabase = createClient();
+      
+      // 使用 Supabase 默认的回调 URL
+      // 不指定 redirectTo，让 Supabase 使用项目配置的 Site URL
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/chat`,
+          // 移除自定义 redirectTo，使用 Supabase Dashboard 中配置的 Site URL
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
