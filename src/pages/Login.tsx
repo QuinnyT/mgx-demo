@@ -189,7 +189,9 @@ export default function LoginPage() {
               {isSignup ? t('auth.dialogTitleSignUp') : t('auth.dialogTitleSignIn')}
             </CardTitle>
             <CardDescription className="text-base text-slate-500">
-              {isSignup ? t('auth.signupSubtitle', { defaultValue: 'Sign up with Google or email' }) : t('auth.signinSubtitle', { defaultValue: 'Sign in with Google or your registered account' })}
+              {isSignup
+                ? t('auth.signupSubtitle', { defaultValue: 'Sign up with Google or email' })
+                : t('auth.signinSubtitle', { defaultValue: 'Sign in with Google or your registered account' })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -220,13 +222,17 @@ export default function LoginPage() {
                   />
                 </svg>
               </span>
-              {isSignup ? t('auth.signUpWithGoogle', { defaultValue: 'Sign up with Google' }) : t('auth.signInWithGoogle', { defaultValue: 'Sign in with Google' })}
+              {isSignup
+                ? t('auth.signUpWithGoogle', { defaultValue: 'Sign up with Google' })
+                : t('auth.signInWithGoogle', { defaultValue: 'Sign in with Google' })}
             </Button>
 
             <div className="relative text-center text-sm text-slate-400">
               <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-slate-200" aria-hidden />
               <span className="relative inline-block bg-white px-3 text-slate-400">
-                {isSignup ? t('auth.signupWithEmail', { defaultValue: 'Or sign up with email' }) : t('auth.signinWithEmail', { defaultValue: 'Or sign in with email' })}
+                {isSignup
+                  ? t('auth.signupWithEmail', { defaultValue: 'Or sign up with email' })
+                  : t('auth.signinWithEmail', { defaultValue: 'Or sign in with email' })}
               </span>
             </div>
 

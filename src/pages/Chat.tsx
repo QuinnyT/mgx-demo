@@ -9,7 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Plus, Send, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
@@ -44,7 +52,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (initialized && !user) {
-      navigate('/login', { replace: true });
+      navigate('/login');
     }
   }, [user, initialized, navigate]);
 
@@ -115,7 +123,7 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
       <Header />
-      
+
       <div className="flex-1 container mx-auto px-4 py-6 flex gap-4">
         {/* Conversations Sidebar */}
         <Card className="w-80 flex flex-col">
@@ -130,9 +138,7 @@ export default function ChatPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>New Conversation</DialogTitle>
-                  <DialogDescription>
-                    Start a new conversation
-                  </DialogDescription>
+                  <DialogDescription>Start a new conversation</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
@@ -154,16 +160,14 @@ export default function ChatPage() {
               </DialogContent>
             </Dialog>
           </div>
-          
+
           <ScrollArea className="flex-1">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : conversations.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No conversations yet
-              </div>
+              <div className="p-4 text-center text-sm text-muted-foreground">No conversations yet</div>
             ) : (
               <div className="p-2 space-y-1">
                 {conversations.map((conv) => (
@@ -172,7 +176,7 @@ export default function ChatPage() {
                     onClick={() => setCurrentConversation(conv)}
                     className={cn(
                       'w-full text-left p-3 rounded-lg hover:bg-accent transition-colors',
-                      currentConversation?.id === conv.id && 'bg-accent'
+                      currentConversation?.id === conv.id && 'bg-accent',
                     )}
                   >
                     <div className="font-medium truncate">{conv.title}</div>
@@ -193,7 +197,7 @@ export default function ChatPage() {
               <div className="p-4 border-b">
                 <h2 className="font-semibold">{currentConversation.title}</h2>
               </div>
-              
+
               <ScrollArea className="flex-1 p-4">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
@@ -205,17 +209,14 @@ export default function ChatPage() {
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={cn(
-                          'flex',
-                          message.role === 'user' ? 'justify-end' : 'justify-start'
-                        )}
+                        className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
                       >
                         <div
                           className={cn(
                             'max-w-[70%] rounded-lg p-3',
                             message.role === 'user'
                               ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
+                              : 'bg-muted',
                           )}
                         >
                           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -239,16 +240,8 @@ export default function ChatPage() {
                     onKeyPress={handleKeyPress}
                     disabled={isSending}
                   />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={isSending || !messageInput.trim()}
-                    size="icon"
-                  >
-                    {isSending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
+                  <Button onClick={handleSendMessage} disabled={isSending || !messageInput.trim()} size="icon">
+                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
