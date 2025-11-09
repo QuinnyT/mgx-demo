@@ -37,6 +37,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 const quickActions = [
@@ -58,6 +66,7 @@ export default function IndexPage() {
   const [showPromoBanner, setShowPromoBanner] = useState(true);
   const [prompt, setPrompt] = useState('');
   const [promptSubmitting, setPromptSubmitting] = useState(false);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!initialized) {
@@ -136,7 +145,7 @@ export default function IndexPage() {
     if (!value || promptSubmitting) return;
 
     if (!user) {
-      navigate(`/login?redirect=${encodeURIComponent('/chat')}`);
+      setAuthDialogOpen(true);
       return;
     }
 
@@ -167,6 +176,33 @@ export default function IndexPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-[#f6f3ff] via-white to-[#f4f6ff] text-slate-900">
+      <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogHeader>
+            <DialogTitle>{t('dialog.title')}</DialogTitle>
+            <DialogDescription>{t('dialog.description')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex w-full flex-row justify-center gap-3 sm:justify-center">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAuthDialogOpen(false);
+                navigate('/login?mode=signup');
+              }}
+            >
+              {t('dialog.signUp')}
+            </Button>
+            <Button
+              onClick={() => {
+                setAuthDialogOpen(false);
+                navigate('/login');
+              }}
+            >
+              {t('dialog.signIn')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Promo Banner */}
       {showPromoBanner && (
         <div className="relative bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3 text-center text-white">
