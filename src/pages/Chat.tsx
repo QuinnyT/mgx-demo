@@ -398,48 +398,53 @@ ${scripts}
                     <h2 className="font-semibold">{currentConversation.title}</h2>
                   </div>
 
-                  <ScrollArea className="flex-1 p-4">
-                    {messages.length === 0 && !isGenerating ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center">
-                        <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {messages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
-                          >
-                            <div
-                              className={cn(
-                                'max-w-[70%] rounded-lg p-3',
-                                message.role === 'user'
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted',
-                              )}
-                            >
-                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                              <p className="text-xs opacity-70 mt-1">
-                                {new Date(message.created_at).toLocaleTimeString()}
-                              </p>
-                            </div>
+                  {/* 修复：添加固定高度和滚动 */}
+                  <div className="flex-1 overflow-hidden">
+                    <ScrollArea className="h-full">
+                      <div className="p-4">
+                        {messages.length === 0 && !isGenerating ? (
+                          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                            <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+                            <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
                           </div>
-                        ))}
-                        {isGenerating && (
-                          <div className="flex justify-start">
-                            <div className="max-w-[70%] rounded-lg p-3 bg-muted">
-                              <div className="flex items-center gap-2">
-                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                <p className="text-sm text-muted-foreground">Generating...</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {messages.map((message) => (
+                              <div
+                                key={message.id}
+                                className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
+                              >
+                                <div
+                                  className={cn(
+                                    'max-w-[70%] rounded-lg p-3',
+                                    message.role === 'user'
+                                      ? 'bg-primary text-primary-foreground'
+                                      : 'bg-muted',
+                                  )}
+                                >
+                                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                  <p className="text-xs opacity-70 mt-1">
+                                    {new Date(message.created_at).toLocaleTimeString()}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
+                            ))}
+                            {isGenerating && (
+                              <div className="flex justify-start">
+                                <div className="max-w-[70%] rounded-lg p-3 bg-muted">
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                    <p className="text-sm text-muted-foreground">Generating...</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            <div ref={messagesEndRef} />
                           </div>
                         )}
-                        <div ref={messagesEndRef} />
                       </div>
-                    )}
-                  </ScrollArea>
+                    </ScrollArea>
+                  </div>
 
                   <div className="p-4 border-t flex-shrink-0">
                     <div className="flex gap-2">
