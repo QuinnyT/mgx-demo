@@ -11,10 +11,12 @@ import {
   Globe2,
   Languages,
   Loader2,
+  LogOut,
   Menu,
   Paperclip,
   Send,
   Sparkles,
+  User,
   X,
 } from 'lucide-react';
 
@@ -47,7 +49,7 @@ const quickActions = [
 export default function IndexPage() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { user, initialize, initialized } = useAuthStore();
+  const { user, initialize, initialized, signOut } = useAuthStore();
   const { createConversation, sendMessage, setCurrentConversation, fetchMessages } = useChatStore();
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ recents: true, pinned: true });
@@ -115,6 +117,17 @@ export default function IndexPage() {
       window.localStorage.setItem(LANG_STORAGE_KEY, code);
     }
     setSelectedLanguage(code);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Successfully signed out');
+      navigate('/login');
+    } catch (error) {
+      toast.error('Failed to sign out');
+      console.error(error);
+    }
   };
 
   const handlePromptSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -221,16 +234,46 @@ export default function IndexPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
-              {t('nav.signIn')}
-            </Button>
-            <Button
-              size="sm"
-              className="bg-slate-900 text-white hover:bg-slate-800"
-              onClick={() => navigate('/login?mode=signup')}
-            >
-              {t('nav.signUp')}
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/chat')} className="gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="hidden md:inline">Chat</span>
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <User className="h-4 w-4" />
+                      <span className="hidden md:inline">{user.email?.split('@')[0]}</span>
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                      {user.email}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="gap-2 text-sm">
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
+                  {t('nav.signIn')}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-slate-900 text-white hover:bg-slate-800"
+                  onClick={() => navigate('/login?mode=signup')}
+                >
+                  {t('nav.signUp')}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -271,6 +314,7 @@ export default function IndexPage() {
                 "w-full bg-gradient-to-r from-[#805bff] to-[#4f46e5] text-white hover:from-[#6f4de4] hover:to-[#3d3ac7]",
                 sidebarCollapsed ? "justify-center px-0" : "justify-start gap-2"
               )}
+              onClick={() => user ? navigate('/chat') : navigate('/login')}
             >
               <Sparkles className="h-4 w-4" />
               {!sidebarCollapsed && t('sidebar.newChat')}
