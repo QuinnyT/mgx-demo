@@ -51,11 +51,21 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create project versions table
+CREATE TABLE IF NOT EXISTS project_versions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE NOT NULL,
+    summary TEXT,
+    files JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_project_versions_conversation_id ON project_versions(conversation_id);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -83,6 +93,7 @@ Enable RLS and create policies to secure your data:
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE project_versions ENABLE ROW LEVEL SECURITY;
 
 -- Projects policies
 CREATE POLICY "Users can view their own projects"
@@ -146,6 +157,27 @@ CREATE POLICY "Users can update their own messages"
 CREATE POLICY "Users can delete their own messages"
     ON messages FOR DELETE
     USING (auth.uid() = user_id);
+
+-- Project version policies
+CREATE POLICY "Users can view project versions in their conversations"
+    ON project_versions FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM conversations
+            WHERE conversations.id = project_versions.conversation_id
+            AND conversations.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can create project versions in their conversations"
+    ON project_versions FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM conversations
+            WHERE conversations.id = conversation_id
+            AND conversations.user_id = auth.uid()
+        )
+    );
 ```
 
 ## Realtime Configuration

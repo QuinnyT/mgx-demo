@@ -52,6 +52,12 @@ export interface GeneratedProject {
   files: GeneratedFile[];
 }
 
+export interface GeneratedProjectVersion extends GeneratedProject {
+  id: string;
+  conversation_id: string;
+  created_at: string;
+}
+
 export interface CreateMessageInput {
   conversation_id: string;
   content: string;

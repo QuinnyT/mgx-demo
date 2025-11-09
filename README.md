@@ -216,6 +216,7 @@ This project uses Tailwind CSS with CSS variables defined inside `src/index.css`
 
 3. **配置密钥**
    ```bash
+   supabase secrets set DEEPSEEK_API_BASE_URL="https://api.deepseek.com"
    supabase secrets set DEEPSEEK_API_KEY="your-deepseek-api-key"
    ```
 

@@ -1,11 +1,17 @@
 import { create } from 'zustand';
 import { createClient } from '@/lib/supabase/client';
-import type { Conversation, Message, GeneratedProject } from '@/types';
+import type {
+  Conversation,
+  Message,
+  GeneratedProject,
+  GeneratedProjectVersion,
+} from '@/types';
 
 interface ChatState {
   conversations: Conversation[];
   currentConversation: Conversation | null;
   messages: Message[];
+  projectVersions: Record<string, GeneratedProjectVersion[]>;
   loading: boolean;
   fetchConversations: () => Promise<void>;
   createConversation: (title: string) => Promise<Conversation>;
@@ -13,13 +19,24 @@ interface ChatState {
   fetchMessages: (conversationId: string) => Promise<void>;
   sendMessage: (content: string, role?: 'user' | 'assistant') => Promise<void>;
   subscribeToMessages: (conversationId: string) => () => void;
-  generateProject: (prompt: string) => Promise<GeneratedProject>;
+  fetchProjectVersions: (conversationId: string) => Promise<void>;
+  saveProjectVersion: (
+    conversationId: string,
+    project: GeneratedProject,
+  ) => Promise<GeneratedProjectVersion>;
+  updateProjectVersion: (
+    versionId: string,
+    conversationId: string,
+    project: GeneratedProject,
+  ) => Promise<GeneratedProjectVersion>;
+  generateProject: (prompt: string) => Promise<GeneratedProjectVersion>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   conversations: [],
   currentConversation: null,
   messages: [],
+  projectVersions: {},
   loading: false,
 
   fetchConversations: async () => {
@@ -67,6 +84,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         conversations: [data, ...state.conversations],
         currentConversation: data,
         loading: false,
+        projectVersions: {
+          ...state.projectVersions,
+          [data.id]: [],
+        },
       }));
 
       return data;
@@ -136,7 +157,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         conversations: state.conversations.map((conversation) =>
           conversation.id === currentConversation.id
             ? { ...conversation, updated_at: data.created_at }
-            : conversation
+            : conversation,
         ),
       }));
     } catch (error) {
@@ -172,11 +193,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
               conversations: state.conversations.map((conversation) =>
                 conversation.id === conversationId
                   ? { ...conversation, updated_at: incoming.created_at }
-                  : conversation
+                  : conversation,
               ),
             };
           });
-        }
+        },
       )
       .subscribe();
 
@@ -185,7 +206,103 @@ export const useChatStore = create<ChatState>((set, get) => ({
     };
   },
 
+  fetchProjectVersions: async (conversationId: string) => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('project_versions')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      set((state) => ({
+        projectVersions: {
+          ...state.projectVersions,
+          [conversationId]: (data as GeneratedProjectVersion[]) ?? [],
+        },
+      }));
+    } catch (error) {
+      console.error('Error fetching project versions:', error);
+      throw error;
+    }
+  },
+
+  saveProjectVersion: async (conversationId: string, project: GeneratedProject) => {
+    try {
+      const supabase = createClient();
+      const payload = {
+        conversation_id: conversationId,
+        summary: project.summary,
+        files: project.files,
+      };
+
+      const { data, error } = await supabase
+        .from('project_versions')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const version = data as GeneratedProjectVersion;
+
+      set((state) => {
+        const existing = state.projectVersions[conversationId] ?? [];
+        return {
+          projectVersions: {
+            ...state.projectVersions,
+            [conversationId]: [version, ...existing],
+          },
+        };
+      });
+
+      return version;
+    } catch (error) {
+      console.error('Error saving project version:', error);
+      throw error;
+    }
+  },
+
+  updateProjectVersion: async (versionId: string, conversationId: string, project: GeneratedProject) => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('project_versions')
+        .update({
+          summary: project.summary,
+          files: project.files,
+        })
+        .eq('id', versionId)
+        .eq('conversation_id', conversationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const version = data as GeneratedProjectVersion;
+
+      set((state) => ({
+        projectVersions: {
+          ...state.projectVersions,
+          [conversationId]: (state.projectVersions[conversationId] ?? []).map((existing) =>
+            existing.id === versionId ? version : existing,
+          ),
+        },
+      }));
+
+      return version;
+    } catch (error) {
+      console.error('Error updating project version:', error);
+      throw error;
+    }
+  },
+
   generateProject: async (prompt: string) => {
+    const { currentConversation, saveProjectVersion } = get();
+    if (!currentConversation) throw new Error('No conversation selected');
+
     const supabase = createClient();
     const response = await supabase.functions.invoke('generate-project', {
       body: { prompt },
@@ -206,7 +323,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       throw error;
     }
 
-    return data as GeneratedProject;
+    const project = data as GeneratedProject;
+    const version = await saveProjectVersion(currentConversation.id, project);
+    return version;
   },
 }));
 

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useChatStore } from '@/lib/store/chat-store';
-import type { GeneratedProject } from '@/types';
+import type { GeneratedProjectVersion } from '@/types';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,31 +20,36 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Send, Loader2, MessageSquare } from 'lucide-react';
+import { Plus, Send, Loader2, MessageSquare, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function ChatPage() {
   const navigate = useNavigate();
   const { user, initialize, initialized } = useAuthStore();
-  const {
-    conversations,
-    currentConversation,
-    messages,
-    loading,
-    fetchConversations,
-    createConversation,
-    setCurrentConversation,
-    sendMessage,
-    subscribeToMessages,
-    generateProject,
-  } = useChatStore();
+  const conversations = useChatStore((state) => state.conversations);
+  const currentConversation = useChatStore((state) => state.currentConversation);
+  const messages = useChatStore((state) => state.messages);
+  const loading = useChatStore((state) => state.loading);
+  const fetchConversations = useChatStore((state) => state.fetchConversations);
+  const createConversation = useChatStore((state) => state.createConversation);
+  const setCurrentConversation = useChatStore((state) => state.setCurrentConversation);
+  const sendMessage = useChatStore((state) => state.sendMessage);
+  const subscribeToMessages = useChatStore((state) => state.subscribeToMessages);
+  const generateProject = useChatStore((state) => state.generateProject);
+  const fetchProjectVersions = useChatStore((state) => state.fetchProjectVersions);
+  const saveProjectVersion = useChatStore((state) => state.saveProjectVersion);
+  const updateProjectVersion = useChatStore((state) => state.updateProjectVersion);
+  const projectVersionsMap = useChatStore((state) => state.projectVersions);
+  const conversationId = currentConversation?.id ?? null;
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newConversationTitle, setNewConversationTitle] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [generatedProject, setGeneratedProject] = useState<GeneratedProject | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [generatedProject, setGeneratedProject] = useState<GeneratedProjectVersion | null>(null);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -78,9 +83,44 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    setGeneratedProject(null);
-    setSelectedFileIndex(0);
-  }, [currentConversation?.id]);
+    if (conversationId) {
+      fetchProjectVersions(conversationId).catch((error) =>
+        console.error('Failed to fetch project versions', error),
+      );
+    }
+  }, [conversationId, fetchProjectVersions]);
+  const versions = useMemo(() => {
+    if (!conversationId) return [];
+    return projectVersionsMap[conversationId] ?? [];
+  }, [conversationId, projectVersionsMap]);
+
+  useEffect(() => {
+    if (!conversationId) {
+      setGeneratedProject(null);
+      setActiveVersionId(null);
+      setSelectedFileIndex(0);
+      return;
+    }
+
+    if (versions.length === 0) {
+      setGeneratedProject(null);
+      setActiveVersionId(null);
+      setSelectedFileIndex(0);
+      return;
+    }
+
+    const desiredVersion =
+      (activeVersionId && versions.find((version) => version.id === activeVersionId)) || versions[0];
+
+    if (generatedProject?.id !== desiredVersion.id) {
+      setGeneratedProject(desiredVersion);
+      setSelectedFileIndex(0);
+    }
+
+    if (activeVersionId !== desiredVersion.id) {
+      setActiveVersionId(desiredVersion.id);
+    }
+  }, [conversationId, versions, activeVersionId, generatedProject?.id]);
 
   const handleCreateConversation = async () => {
     if (!newConversationTitle.trim()) {
@@ -110,12 +150,13 @@ export default function ChatPage() {
       await sendMessage(prompt);
       setMessageInput('');
 
-      const project = await generateProject(prompt);
-      setGeneratedProject(project);
+      const version = await generateProject(prompt);
+      setGeneratedProject(version);
+      setActiveVersionId(version.id);
       setSelectedFileIndex(0);
 
-      if (project.summary) {
-        await sendMessage(project.summary, 'assistant');
+      if (version.summary) {
+        await sendMessage(version.summary, 'assistant');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to generate project';
@@ -172,6 +213,27 @@ ${scripts}
   }
 
   const selectedFile = generatedProject?.files[selectedFileIndex];
+
+  const handleRestoreVersion = async (version: GeneratedProjectVersion) => {
+    if (!currentConversation) return;
+
+    setIsRestoring(true);
+    try {
+      const updated = await updateProjectVersion(version.id, currentConversation.id, {
+        summary: version.summary,
+        files: version.files,
+      });
+
+      setActiveVersionId(updated.id);
+      toast.success('Version restored');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to restore version';
+      toast.error(message);
+      console.error(error);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
@@ -319,11 +381,19 @@ ${scripts}
 
           {/* Preview Area */}
           <Card className="flex-1 flex flex-col overflow-hidden">
-            <div className="border-b p-4">
-              <h2 className="font-semibold text-slate-800">Project Preview</h2>
-              <p className="text-xs text-muted-foreground">
-                View the AI generated summary, live preview, and source code files.
-              </p>
+            <div className="border-b p-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-slate-800">Project Preview</h2>
+                <p className="text-xs text-muted-foreground">
+                  View the AI generated summary, live preview, and source code files.
+                </p>
+              </div>
+              {versions.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <History className="h-4 w-4" />
+                  <span>{versions.length} versions</span>
+                </div>
+              )}
             </div>
             {generatedProject ? (
               <div className="flex flex-1 flex-col overflow-hidden">
@@ -332,6 +402,42 @@ ${scripts}
                   <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">
                     {generatedProject.summary || 'The assistant did not provide a summary.'}
                   </p>
+                </div>
+                <div className="border-b px-4 py-3">
+                  {versions.length > 0 ? (
+                    <ScrollArea className="max-h-48 pr-2">
+                      <div className="space-y-2">
+                        {versions.map((version, index) => {
+                          const versionNumber = versions.length - index;
+                          const isActive = version.id === activeVersionId;
+                          const createdAt = new Date(version.created_at).toLocaleString();
+                          return (
+                            <div key={version.id} className="flex items-center gap-2">
+                              <Button
+                                variant={isActive ? 'default' : 'ghost'}
+                                size="sm"
+                                className="flex-1 justify-start"
+                                onClick={() => setActiveVersionId(version.id)}
+                              >
+                                <span className="font-medium">v{versionNumber}</span>
+                                <span className="ml-2 text-xs text-slate-300">{createdAt}</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRestoreVersion(version)}
+                                disabled={isRestoring}
+                              >
+                                Restore
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No versions yet.</p>
+                  )}
                 </div>
                 <div className="flex-1 overflow-hidden">
                   {previewDocument ? (
