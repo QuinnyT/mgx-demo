@@ -58,7 +58,7 @@ export default function IndexPage() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user, initialize, initialized, signOut } = useAuthStore();
-  const { createConversation, sendMessage, setCurrentConversation, fetchMessages, generateProject } = useChatStore();
+  const { createConversation, sendMessage, setCurrentConversation } = useChatStore();
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ recents: true, pinned: true });
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
@@ -153,29 +153,20 @@ export default function IndexPage() {
       setPromptSubmitting(true);
       const truncatedTitle = value.length > 60 ? `${value.slice(0, 57)}...` : value;
       
-      // Create conversation
+      // 1. 创建对话
       const conversation = await createConversation(truncatedTitle);
       
-      // Send user message
+      // 2. 发送用户消息
       await sendMessage(value, 'user');
       
-      // Generate project with AI
-      const version = await generateProject(value);
-      
-      // Send AI response with summary
-      if (version.summary) {
-        await sendMessage(version.summary, 'assistant');
-      }
-      
-      // Fetch all messages to sync
-      await fetchMessages(conversation.id);
-      
-      // Set current conversation and navigate
+      // 3. 设置当前对话
       setCurrentConversation(conversation);
-      navigate(`/chat?conversation=${conversation.id}`);
-      setPrompt('');
       
-      toast.success('Project generated successfully!');
+      // 4. 立即跳转到对话页面（在对话页面中会自动调用 API）
+      navigate(`/chat?conversation=${conversation.id}&prompt=${encodeURIComponent(value)}`);
+      
+      // 5. 清空输入框
+      setPrompt('');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to start conversation';
       toast.error(message);
