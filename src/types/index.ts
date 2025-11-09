@@ -41,6 +41,17 @@ export interface Message {
   created_at: string;
 }
 
+export interface GeneratedFile {
+  name: string;
+  language?: string;
+  content: string;
+}
+
+export interface GeneratedProject {
+  summary: string;
+  files: GeneratedFile[];
+}
+
 export interface CreateMessageInput {
   conversation_id: string;
   content: string;

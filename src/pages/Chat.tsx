@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useChatStore } from '@/lib/store/chat-store';
+import type { GeneratedProject } from '@/types';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,12 +37,15 @@ export default function ChatPage() {
     setCurrentConversation,
     sendMessage,
     subscribeToMessages,
+    generateProject,
   } = useChatStore();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newConversationTitle, setNewConversationTitle] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [generatedProject, setGeneratedProject] = useState<GeneratedProject | null>(null);
+  const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,6 +77,11 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    setGeneratedProject(null);
+    setSelectedFileIndex(0);
+  }, [currentConversation?.id]);
+
   const handleCreateConversation = async () => {
     if (!newConversationTitle.trim()) {
       toast.error('Please enter a conversation title');
@@ -80,10 +89,12 @@ export default function ChatPage() {
     }
 
     try {
-      await createConversation(newConversationTitle);
+      const conversation = await createConversation(newConversationTitle);
       toast.success('Conversation created');
       setIsCreateDialogOpen(false);
       setNewConversationTitle('');
+      setCurrentConversation(conversation);
+      setGeneratedProject(null);
     } catch (error) {
       toast.error('Failed to create conversation');
       console.error(error);
@@ -94,11 +105,21 @@ export default function ChatPage() {
     if (!messageInput.trim() || !currentConversation) return;
 
     setIsSending(true);
+    const prompt = messageInput.trim();
     try {
-      await sendMessage(messageInput);
+      await sendMessage(prompt);
       setMessageInput('');
+
+      const project = await generateProject(prompt);
+      setGeneratedProject(project);
+      setSelectedFileIndex(0);
+
+      if (project.summary) {
+        await sendMessage(project.summary, 'assistant');
+      }
     } catch (error) {
-      toast.error('Failed to send message');
+      const message = error instanceof Error ? error.message : 'Failed to generate project';
+      toast.error(message);
       console.error(error);
     } finally {
       setIsSending(false);
@@ -112,6 +133,36 @@ export default function ChatPage() {
     }
   };
 
+  const previewDocument = useMemo(() => {
+    if (!generatedProject) return null;
+
+    const htmlFile = generatedProject.files.find((file) => file.name.toLowerCase().endsWith('.html'));
+    if (!htmlFile) return null;
+
+    const css = generatedProject.files
+      .filter((file) => file.name.toLowerCase().endsWith('.css'))
+      .map((file) => `<style>${file.content}</style>`)
+      .join('\n');
+
+    const scripts = generatedProject.files
+      .filter((file) => file.name.toLowerCase().endsWith('.js') || file.name.toLowerCase().endsWith('.ts'))
+      .map((file) => `<script type="module">${file.content}</script>`)
+      .join('\n');
+
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+${css}
+</head>
+<body>
+${htmlFile.content}
+${scripts}
+</body>
+</html>`;
+  }, [generatedProject]);
+
   if (!initialized || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -119,6 +170,8 @@ export default function ChatPage() {
       </div>
     );
   }
+
+  const selectedFile = generatedProject?.files[selectedFileIndex];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
@@ -190,78 +243,140 @@ export default function ChatPage() {
           </ScrollArea>
         </Card>
 
-        {/* Chat Area */}
-        <Card className="flex-1 flex flex-col">
-          {currentConversation ? (
-            <>
-              <div className="p-4 border-b">
-                <h2 className="font-semibold">{currentConversation.title}</h2>
-              </div>
+        <div className="flex flex-1 gap-4">
+          {/* Chat Area */}
+          <Card className="flex-[2] flex flex-col">
+            {currentConversation ? (
+              <>
+                <div className="p-4 border-b">
+                  <h2 className="font-semibold">{currentConversation.title}</h2>
+                </div>
 
-              <ScrollArea className="flex-1 p-4">
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
-                      >
+                <ScrollArea className="flex-1 p-4">
+                  {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {messages.map((message) => (
                         <div
-                          className={cn(
-                            'max-w-[70%] rounded-lg p-3',
-                            message.role === 'user'
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted',
-                          )}
+                          key={message.id}
+                          className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {new Date(message.created_at).toLocaleTimeString()}
-                          </p>
+                          <div
+                            className={cn(
+                              'max-w-[70%] rounded-lg p-3',
+                              message.role === 'user'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted',
+                            )}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            <p className="text-xs opacity-70 mt-1">
+                              {new Date(message.created_at).toLocaleTimeString()}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
-              </ScrollArea>
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
+                </ScrollArea>
 
-              <div className="p-4 border-t">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Type your message..."
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    disabled={isSending}
-                  />
-                  <Button onClick={handleSendMessage} disabled={isSending || !messageInput.trim()} size="icon">
-                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <div className="p-4 border-t">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Describe the project you want..."
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      disabled={isSending}
+                    />
+                    <Button onClick={handleSendMessage} disabled={isSending || !messageInput.trim()} size="icon">
+                      {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No conversation selected</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Select a conversation or create a new one to start chatting
+                  </p>
+                  <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    New Conversation
                   </Button>
                 </div>
               </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No conversation selected</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select a conversation or create a new one to start chatting
-                </p>
-                <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Conversation
-                </Button>
-              </div>
+            )}
+          </Card>
+
+          {/* Preview Area */}
+          <Card className="flex-1 flex flex-col overflow-hidden">
+            <div className="border-b p-4">
+              <h2 className="font-semibold text-slate-800">Project Preview</h2>
+              <p className="text-xs text-muted-foreground">
+                View the AI generated summary, live preview, and source code files.
+              </p>
             </div>
-          )}
-        </Card>
+            {generatedProject ? (
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="border-b p-4">
+                  <h3 className="text-sm font-semibold text-slate-700">Summary</h3>
+                  <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">
+                    {generatedProject.summary || 'The assistant did not provide a summary.'}
+                  </p>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  {previewDocument ? (
+                    <iframe
+                      key={currentConversation?.id}
+                      title="Project Preview"
+                      srcDoc={previewDocument}
+                      className="h-64 w-full border-b"
+                      sandbox="allow-scripts allow-same-origin"
+                    />
+                  ) : (
+                    <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                      No HTML preview available for this project.
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2 border-b px-4 py-3">
+                    {generatedProject.files.map((file, index) => (
+                      <Button
+                        key={`${file.name}-${index}`}
+                        variant={selectedFileIndex === index ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedFileIndex(index)}
+                      >
+                        {file.name}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex-1 overflow-auto p-4">
+                    {selectedFile ? (
+                      <pre className="whitespace-pre-wrap break-words rounded-lg bg-slate-900/90 p-4 font-mono text-xs text-white">
+                        {selectedFile.content}
+                      </pre>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Select a file to inspect the generated code.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
+                Generate a project by describing it in the chat input. The summary and code will appear here.
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );

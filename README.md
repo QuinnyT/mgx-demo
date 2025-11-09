@@ -201,3 +201,36 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Theme Configuration
 
 This project uses Tailwind CSS with CSS variables defined inside `src/index.css` to control the design system colors. Update the values under `:root` (light theme) and `.dark` (dark theme) to change the primary, secondary, accent and background colors. After editing `index.css`, any component that uses the existing Tailwind color tokens (such as `bg-primary`, `text-accent`, etc.) will automatically reflect the new theme.
+
+## AI Project Generation via Supabase + DeepSeek
+
+1. **Prerequisites**
+   - Install the [Supabase CLI](https://supabase.com/docs/guides/cli).
+   - Ensure you have a Supabase project and a `DEEPSEEK_API_KEY`。
+
+2. **Create the Edge Function**
+   ```bash
+   supabase functions new generate-project
+   ```
+   本仓库已在 `supabase/functions/generate-project/index.ts` 中提供实现。
+
+3. **配置密钥**
+   ```bash
+   supabase secrets set DEEPSEEK_API_KEY="your-deepseek-api-key"
+   ```
+
+4. **部署函数**
+   ```bash
+   supabase functions deploy generate-project
+   ```
+
+5. **本地调试（可选）**
+   ```bash
+   supabase functions serve generate-project --env-file supabase/.env.preview
+   ```
+
+6. **前端集成**
+   - `src/lib/store/chat-store.ts` 暴露 `generateProject(prompt)`，调用该 Edge Function。
+   - `src/pages/Chat.tsx` 使用此方法发送用户需求，保存 AI 回复，并展示预览/代码。
+
+部署完成后，聊天页输入项目描述即可触发 DeepSeek 生成代码并实时预览。`DEEPSEEK_API_KEY` 只在 Edge Function 中使用，不会暴露在前端。

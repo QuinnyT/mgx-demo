@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createClient } from '@/lib/supabase/client';
-import type { Conversation, Message } from '@/types';
+import type { Conversation, Message, GeneratedProject } from '@/types';
 
 interface ChatState {
   conversations: Conversation[];
@@ -13,6 +13,7 @@ interface ChatState {
   fetchMessages: (conversationId: string) => Promise<void>;
   sendMessage: (content: string, role?: 'user' | 'assistant') => Promise<void>;
   subscribeToMessages: (conversationId: string) => () => void;
+  generateProject: (prompt: string) => Promise<GeneratedProject>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -182,6 +183,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return () => {
       supabase.removeChannel(channel);
     };
+  },
+
+  generateProject: async (prompt: string) => {
+    const supabase = createClient();
+    const response = await supabase.functions.invoke('generate-project', {
+      body: { prompt },
+    });
+    console.log('generate-project response', response);
+    const { data, error } = response;
+
+    if (error) {
+      try {
+        const rawResponse = (error as { context?: { response?: Response } }).context?.response;
+        if (rawResponse && !rawResponse.bodyUsed) {
+          const text = await rawResponse.text();
+          console.error('generate-project error body', text);
+        }
+      } catch (err) {
+        console.error('Failed to read error response body', err);
+      }
+      throw error;
+    }
+
+    return data as GeneratedProject;
   },
 }));
 
