@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,6 +20,7 @@ import {
 
 import { LANG_STORAGE_KEY, languageOptions } from '@/i18n';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { useChatStore } from '@/lib/store/chat-store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 
 const quickActions = [
   { key: 'slides', icon: BadgeCheck },
@@ -46,11 +48,14 @@ export default function IndexPage() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user, initialize, initialized } = useAuthStore();
+  const { createConversation, sendMessage, setCurrentConversation, fetchMessages } = useChatStore();
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ recents: true, pinned: true });
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPromoBanner, setShowPromoBanner] = useState(true);
+  const [prompt, setPrompt] = useState('');
+  const [promptSubmitting, setPromptSubmitting] = useState(false);
 
   useEffect(() => {
     if (!initialized) {
@@ -58,11 +63,11 @@ export default function IndexPage() {
     }
   }, [initialized, initialize]);
 
-  useEffect(() => {
-    if (user) {
-      navigate('/chat');
-    }
-  }, [user, navigate]);
+  // useEffect(() => {
+  //   if (user) {
+  //     navigate('/chat');
+  //   }
+  // }, [user, navigate]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -110,6 +115,33 @@ export default function IndexPage() {
       window.localStorage.setItem(LANG_STORAGE_KEY, code);
     }
     setSelectedLanguage(code);
+  };
+
+  const handlePromptSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const value = prompt.trim();
+    if (!value || promptSubmitting) return;
+
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent('/chat')}`);
+      return;
+    }
+
+    try {
+      setPromptSubmitting(true);
+      const truncatedTitle = value.length > 60 ? `${value.slice(0, 57)}...` : value;
+      const conversation = await createConversation(truncatedTitle);
+      await sendMessage(value, 'user');
+      await fetchMessages(conversation.id);
+      setCurrentConversation(conversation);
+      navigate(`/chat?conversation=${conversation.id}`);
+      setPrompt('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to start conversation';
+      toast.error(message);
+    } finally {
+      setPromptSubmitting(false);
+    }
   };
 
   if (!initialized) {
@@ -344,16 +376,22 @@ export default function IndexPage() {
                   <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm text-slate-500 shadow-sm">
                     {t('main.heroPlaceholder')}
                   </div>
-                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                  <form
+                    onSubmit={handlePromptSubmit}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                  >
                     <Paperclip className="h-4 w-4 text-slate-400" />
                     <Input
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
                       className="border-none bg-transparent p-0 text-base text-slate-700 placeholder:text-slate-400 focus-visible:ring-0"
                       placeholder={t('main.promptPlaceholder')}
+                      disabled={promptSubmitting}
                     />
-                    <Button size="icon" className="rounded-full bg-slate-900 text-white hover:bg-slate-800">
-                      <Send className="h-4 w-4" />
+                    <Button type="submit" size="icon" className="rounded-full bg-slate-900 text-white hover:bg-slate-800" disabled={promptSubmitting}>
+                      {promptSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </Button>
-                  </div>
+                  </form>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
