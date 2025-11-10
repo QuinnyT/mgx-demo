@@ -29,6 +29,7 @@ import {
   X,
   Database,
   Image as ImageIcon,
+  Menu,
 } from 'lucide-react';
 
 import { LANG_STORAGE_KEY, languageOptions } from '@/i18n';
@@ -39,6 +40,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -69,11 +71,13 @@ export default function IndexPage() {
   const { user, initialize, initialized, signOut } = useAuthStore();
   const { 
     conversations,
+    loading,
     createConversation, 
     sendMessage, 
     setCurrentConversation,
     deleteConversation,
     togglePinConversation,
+    fetchConversations,
   } = useChatStore();
 
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
@@ -90,6 +94,12 @@ export default function IndexPage() {
       initialize();
     }
   }, [initialized, initialize]);
+
+  useEffect(() => {
+    if (user) {
+      fetchConversations();
+    }
+  }, [user, fetchConversations]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -359,136 +369,99 @@ export default function IndexPage() {
 
       {/* Main Content with Sidebar */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+        {/* Sidebar - 与 Chat 页面样式一致 */}
         <aside
           className={cn(
-            'border-r bg-white/50 backdrop-blur transition-all duration-300',
-            sidebarCollapsed ? 'w-0' : 'w-64'
+            'hidden flex-shrink-0 flex-col border-r border-slate-200/60 bg-white/75 backdrop-blur transition-all duration-300 md:flex',
+            sidebarCollapsed ? 'w-16' : 'w-72'
           )}
         >
-          <div className={cn('flex h-full flex-col', sidebarCollapsed && 'hidden')}>
-            {/* Sidebar Header */}
-            <div className="border-b p-4">
-              <Button
-                onClick={() => {
-                  if (!user) {
-                    setAuthDialogOpen(true);
-                    return;
-                  }
-                  navigate('/chat');
-                }}
-                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                {t('sidebar.newChat')}
-              </Button>
-            </div>
-
-            {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto p-2">
-              {user ? (
-                <>
-                  {pinnedConversations.length > 0 && (
-                    <div className="mb-4">
-                      <div className="mb-2 px-2 text-xs font-semibold text-muted-foreground">
-                        {t('sidebar.pinned')}
-                      </div>
-                      {pinnedConversations.map((conv) => (
-                        <div
-                          key={conv.id}
-                          className="group relative mb-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent cursor-pointer"
-                          onClick={() => navigate(`/chat?conversation=${conv.id}`)}
-                        >
-                          <MessageSquare className="h-4 w-4 shrink-0" />
-                          <span className="flex-1 truncate">{conv.title}</span>
-                          <div className="hidden group-hover:flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => handleTogglePin(conv.id, e)}
-                            >
-                              <Pin className="h-3 w-3 fill-current" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => handleDeleteConversation(conv.id, e)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {recentConversations.length > 0 && (
-                    <div>
-                      <div className="mb-2 px-2 text-xs font-semibold text-muted-foreground">
-                        {t('sidebar.recents')}
-                      </div>
-                      {recentConversations.map((conv) => (
-                        <div
-                          key={conv.id}
-                          className="group relative mb-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent cursor-pointer"
-                          onClick={() => navigate(`/chat?conversation=${conv.id}`)}
-                        >
-                          <MessageSquare className="h-4 w-4 shrink-0" />
-                          <span className="flex-1 truncate">{conv.title}</span>
-                          <div className="hidden group-hover:flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => handleTogglePin(conv.id, e)}
-                            >
-                              <Pin className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => handleDeleteConversation(conv.id, e)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {conversations.length === 0 && (
-                    <div className="px-2 py-8 text-center text-sm text-muted-foreground">
-                      {t('sidebar.myChats')}
-                    </div>
-                  )}
-                </>
+          {/* Toggle Button */}
+          <div className="flex items-center justify-between border-b border-slate-200/60 p-3 flex-shrink-0">
+            {!sidebarCollapsed && (
+              <div className="flex items-center gap-2">
+                <Menu className="h-5 w-5 text-slate-600" />
+                <span className="text-sm font-semibold text-slate-700">{t('sidebar.myChats')}</span>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-slate-600 hover:bg-slate-100"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
               ) : (
-                <div className="px-2 py-8 text-center text-sm text-muted-foreground">
-                  {t('dialog.description')}
-                </div>
+                <ChevronLeft className="h-4 w-4" />
               )}
-            </div>
+            </Button>
           </div>
-        </aside>
 
-        {/* Sidebar Toggle Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute left-0 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-r-lg border border-l-0 bg-white/80 backdrop-blur"
-          style={{ left: sidebarCollapsed ? '0' : '16rem' }}
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        >
-          {sidebarCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
+          {/* New Chat Button */}
+          <div className="p-3 flex-shrink-0">
+            <Button
+              onClick={() => {
+                if (!user) {
+                  setAuthDialogOpen(true);
+                  return;
+                }
+                navigate('/chat');
+              }}
+              className={cn(
+                'w-full bg-gradient-to-r from-[#805bff] to-[#4f46e5] text-white hover:from-[#6f4de4] hover:to-[#3d3ac7]',
+                sidebarCollapsed ? 'justify-center px-0' : 'justify-start gap-2'
+              )}
+            >
+              <Plus className="h-4 w-4" />
+              {!sidebarCollapsed && t('sidebar.newChat')}
+            </Button>
+          </div>
+
+          {!sidebarCollapsed && (
+            <>
+              {/* My Chats Label */}
+              <div className="mt-6 px-4 text-xs font-semibold uppercase tracking-wide text-slate-400 flex-shrink-0">
+                {t('sidebar.myChats')}
+              </div>
+
+              {/* Conversations List */}
+              <ScrollArea className="mt-2 flex-1 px-2">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : !user ? (
+                  <div className="p-4 text-center text-sm text-slate-400">
+                    {t('dialog.description')}
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-slate-400">
+                    No conversations yet
+                  </div>
+                ) : (
+                  <div className="space-y-1 pb-4">
+                    {conversations.map((conv) => (
+                      <button
+                        key={conv.id}
+                        onClick={() => {
+                          setCurrentConversation(conv);
+                          navigate(`/chat?conversation=${conv.id}`);
+                        }}
+                        className="flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100"
+                      >
+                        <span className="font-medium truncate">{conv.title}</span>
+                        <span className="text-xs text-slate-400">
+                          {new Date(conv.updated_at).toLocaleDateString()}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </>
           )}
-        </Button>
+        </aside>
 
         {/* Main Content Area */}
         <main className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
