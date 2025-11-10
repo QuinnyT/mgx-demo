@@ -6,19 +6,25 @@ import {
   BadgeCheck,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Globe,
   Globe2,
   Languages,
   Linkedin,
   Loader2,
   LogOut,
+  MessageSquare,
+  MoreVertical,
   Paperclip,
+  Pin,
   Plus,
   Presentation,
   BookOpen,
   Link2,
   Send,
   Sparkles,
+  Trash2,
   User,
   X,
   Database,
@@ -62,9 +68,12 @@ export default function IndexPage() {
   const { t, i18n } = useTranslation();
   const { user, initialize, initialized, signOut } = useAuthStore();
   const { 
+    conversations,
     createConversation, 
     sendMessage, 
-    setCurrentConversation 
+    setCurrentConversation,
+    deleteConversation,
+    togglePinConversation,
   } = useChatStore();
 
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
@@ -74,6 +83,7 @@ export default function IndexPage() {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [workMode, setWorkMode] = useState<'team' | 'engineer'>('engineer');
   const [selectedModel, setSelectedModel] = useState('claude-sonnet-4.5');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (!initialized) {
@@ -111,10 +121,10 @@ export default function IndexPage() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast.success('Successfully signed out');
+      toast.success(t('auth.messages.signInSuccess'));
       navigate('/login');
     } catch (error) {
-      toast.error('Failed to sign out');
+      toast.error(t('auth.messages.signInError'));
       console.error(error);
     }
   };
@@ -139,13 +149,44 @@ export default function IndexPage() {
       navigate(`/chat?conversation=${conversation.id}&prompt=${encodeURIComponent(value)}`);
       setPrompt('');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to start conversation';
+      const message = error instanceof Error ? error.message : t('auth.messages.signInError');
       toast.error(message);
       console.error('Error in handlePromptSubmit:', error);
     } finally {
       setPromptSubmitting(false);
     }
   };
+
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteConversation(id);
+      toast.success('Conversation deleted');
+    } catch (error) {
+      toast.error('Failed to delete conversation');
+      console.error(error);
+    }
+  };
+
+  const handleTogglePin = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await togglePinConversation(id);
+    } catch (error) {
+      toast.error('Failed to pin conversation');
+      console.error(error);
+    }
+  };
+
+  const pinnedConversations = useMemo(
+    () => conversations.filter((c) => c.pinned),
+    [conversations]
+  );
+
+  const recentConversations = useMemo(
+    () => conversations.filter((c) => !c.pinned).slice(0, 10),
+    [conversations]
+  );
 
   if (!initialized) {
     return (
@@ -190,7 +231,7 @@ export default function IndexPage() {
         <div className="relative bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-center text-white">
           <div className="flex items-center justify-center gap-2 text-sm font-medium">
             <Sparkles className="h-4 w-4" />
-            <span>Enjoy 21% off! Grab it now!</span>
+            <span>{t('nav.brandTag')}</span>
           </div>
           <button
             onClick={() => setShowPromoBanner(false)}
@@ -214,15 +255,15 @@ export default function IndexPage() {
             
             <nav className="hidden md:flex items-center gap-1">
               <Button variant="ghost" size="sm" className="text-sm h-8 px-3">
-                Learn
+                {t('nav.learn')}
               </Button>
               <Button variant="ghost" size="sm" className="text-sm h-8 px-3">
-                Pricing
+                {t('nav.pricing')}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="text-sm h-8 px-3">
-                    Resources
+                    {t('nav.resources')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -232,10 +273,10 @@ export default function IndexPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button variant="ghost" size="sm" className="text-sm h-8 px-3">
-                Partners
+                {t('nav.affiliates')}
               </Button>
               <Button variant="ghost" size="sm" className="text-sm h-8 px-3">
-                Hackathon
+                {t('nav.launched')}
               </Button>
             </nav>
           </div>
@@ -294,21 +335,21 @@ export default function IndexPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
+                    {t('nav.signIn')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
-                  Sign In
+                  {t('nav.signIn')}
                 </Button>
                 <Button
                   size="sm"
                   className="bg-slate-900 text-white hover:bg-slate-800"
                   onClick={() => navigate('/login?mode=signup')}
                 >
-                  Sign Up
+                  {t('nav.signUp')}
                 </Button>
               </>
             )}
@@ -316,133 +357,268 @@ export default function IndexPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl flex flex-col h-[calc(100vh-12rem)]">
-          {/* Agent Avatars */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-lg">
-              <span className="text-white text-lg">🐶</span>
+      {/* Main Content with Sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside
+          className={cn(
+            'border-r bg-white/50 backdrop-blur transition-all duration-300',
+            sidebarCollapsed ? 'w-0' : 'w-64'
+          )}
+        >
+          <div className={cn('flex h-full flex-col', sidebarCollapsed && 'hidden')}>
+            {/* Sidebar Header */}
+            <div className="border-b p-4">
+              <Button
+                onClick={() => {
+                  if (!user) {
+                    setAuthDialogOpen(true);
+                    return;
+                  }
+                  navigate('/chat');
+                }}
+                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                {t('sidebar.newChat')}
+              </Button>
             </div>
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-lg">
-              <span className="text-white text-lg">🐱</span>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-lg">
-              <span className="text-white text-lg">🐰</span>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center shadow-lg">
-              <span className="text-white text-lg">🐸</span>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center shadow-lg">
-              <span className="text-white text-lg">🐷</span>
-            </div>
-            <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 hover:border-gray-400">
-              <Plus className="h-5 w-5 text-gray-400" />
-            </Button>
-          </div>
 
-          {/* Title */}
-          <h1 className="text-4xl font-bold text-center mb-8 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-            Build Your Ideas with AI
-          </h1>
+            {/* Conversations List */}
+            <div className="flex-1 overflow-y-auto p-2">
+              {user ? (
+                <>
+                  {pinnedConversations.length > 0 && (
+                    <div className="mb-4">
+                      <div className="mb-2 px-2 text-xs font-semibold text-muted-foreground">
+                        {t('sidebar.pinned')}
+                      </div>
+                      {pinnedConversations.map((conv) => (
+                        <div
+                          key={conv.id}
+                          className="group relative mb-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent cursor-pointer"
+                          onClick={() => navigate(`/chat?conversation=${conv.id}`)}
+                        >
+                          <MessageSquare className="h-4 w-4 shrink-0" />
+                          <span className="flex-1 truncate">{conv.title}</span>
+                          <div className="hidden group-hover:flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => handleTogglePin(conv.id, e)}
+                            >
+                              <Pin className="h-3 w-3 fill-current" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => handleDeleteConversation(conv.id, e)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-          {/* Update Badge */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-white/80 px-4 py-2 text-sm shadow-sm">
-              <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
-                Updated
-              </Badge>
-              <span className="text-gray-700">🎉 MGX v1.2.6 正式发布: AI 图像生成与智能作图指南重磅上线!</span>
-            </div>
-          </div>
+                  {recentConversations.length > 0 && (
+                    <div>
+                      <div className="mb-2 px-2 text-xs font-semibold text-muted-foreground">
+                        {t('sidebar.recents')}
+                      </div>
+                      {recentConversations.map((conv) => (
+                        <div
+                          key={conv.id}
+                          className="group relative mb-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent cursor-pointer"
+                          onClick={() => navigate(`/chat?conversation=${conv.id}`)}
+                        >
+                          <MessageSquare className="h-4 w-4 shrink-0" />
+                          <span className="flex-1 truncate">{conv.title}</span>
+                          <div className="hidden group-hover:flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => handleTogglePin(conv.id, e)}
+                            >
+                              <Pin className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => handleDeleteConversation(conv.id, e)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-          {/* Chat Input Area */}
-          <div className="flex-1 flex flex-col">
-            <div className="bg-white/80 backdrop-blur rounded-3xl shadow-xl border-0 p-6 mb-4">
-              <form onSubmit={handlePromptSubmit} className="space-y-4">
-                <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-2xl">
-                  <Input
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="@agent Type #, describe your project..."
-                    disabled={promptSubmitting}
-                    className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-base"
-                  />
-                  <Button 
-                    type="submit" 
-                    size="icon"
-                    disabled={promptSubmitting || !prompt.trim()}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-full"
-                  >
-                    {promptSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
+                  {conversations.length === 0 && (
+                    <div className="px-2 py-8 text-center text-sm text-muted-foreground">
+                      {t('sidebar.myChats')}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="px-2 py-8 text-center text-sm text-muted-foreground">
+                  {t('dialog.description')}
                 </div>
+              )}
+            </div>
+          </div>
+        </aside>
 
-                {/* Bottom Toolbar */}
-                <div className="flex items-center justify-between px-2">
-                  {/* Left - Tools */}
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <ImageIcon className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <Database className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 px-2 gap-1 text-xs">
-                      <Sparkles className="h-3 w-3" />
-                      New
+        {/* Sidebar Toggle Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute left-0 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-r-lg border border-l-0 bg-white/80 backdrop-blur"
+          style={{ left: sidebarCollapsed ? '0' : '16rem' }}
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        >
+          {sidebarCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </Button>
+
+        {/* Main Content Area */}
+        <main className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-4xl flex flex-col h-[calc(100vh-12rem)]">
+            {/* Agent Avatars */}
+            <div className="flex items-center justify-center gap-2 mb-8">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-lg">
+                <span className="text-white text-lg">🐶</span>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-lg">
+                <span className="text-white text-lg">🐱</span>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-lg">
+                <span className="text-white text-lg">🐰</span>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center shadow-lg">
+                <span className="text-white text-lg">🐸</span>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center shadow-lg">
+                <span className="text-white text-lg">🐷</span>
+              </div>
+              <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 hover:border-gray-400">
+                <Plus className="h-5 w-5 text-gray-400" />
+              </Button>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-4xl font-bold text-center mb-8 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              {t('main.heroTitle')}
+            </h1>
+
+            {/* Update Badge */}
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-white/80 px-4 py-2 text-sm shadow-sm">
+                <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
+                  {t('main.badge')}
+                </Badge>
+                <span className="text-gray-700">{t('main.updateTitle')}</span>
+              </div>
+            </div>
+
+            {/* Chat Input Area - Increased Height */}
+            <div className="flex-1 flex flex-col">
+              <div className="bg-white/80 backdrop-blur rounded-3xl shadow-xl border-0 p-6 mb-4">
+                <form onSubmit={handlePromptSubmit} className="space-y-4">
+                  <div className="flex items-start gap-2 p-4 bg-gray-50 rounded-2xl min-h-[120px]">
+                    <Input
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder={t('main.heroPlaceholder')}
+                      disabled={promptSubmitting}
+                      className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-base resize-none min-h-[80px]"
+                      style={{ minHeight: '80px' }}
+                    />
+                    <Button 
+                      type="submit" 
+                      size="icon"
+                      disabled={promptSubmitting || !prompt.trim()}
+                      className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-full mt-2"
+                    >
+                      {promptSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </Button>
                   </div>
 
-                  {/* Center - Mode Switch */}
-                  <Tabs value={workMode} onValueChange={(v) => setWorkMode(v as 'team' | 'engineer')}>
-                    <TabsList className="h-8">
-                      <TabsTrigger value="team" className="text-xs h-7 px-3">Team Mode</TabsTrigger>
-                      <TabsTrigger value="engineer" className="text-xs h-7 px-3">Engineer Mode</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
+                  {/* Bottom Toolbar */}
+                  <div className="flex items-center justify-between px-2">
+                    {/* Left - Tools */}
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <ImageIcon className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Database className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 px-2 gap-1 text-xs">
+                        <Sparkles className="h-3 w-3" />
+                        {t('main.newBadge')}
+                      </Button>
+                    </div>
 
-                  {/* Right - Model Selection */}
-                  <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="w-[180px] h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent side="top">
-                      <SelectItem value="claude-sonnet-4.5">Claude Sonnet 4.5</SelectItem>
-                      <SelectItem value="gpt-4">GPT-4</SelectItem>
-                      <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
-                      <SelectItem value="deepseek">DeepSeek</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </form>
-            </div>
+                    {/* Center - Mode Switch */}
+                    <Tabs value={workMode} onValueChange={(v) => setWorkMode(v as 'team' | 'engineer')}>
+                      <TabsList className="h-8">
+                        <TabsTrigger value="team" className="text-xs h-7 px-3">Team Mode</TabsTrigger>
+                        <TabsTrigger value="engineer" className="text-xs h-7 px-3">Engineer Mode</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
 
-            {/* Quick Actions */}
-            <div className="flex items-center justify-center gap-6">
-              <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                <Presentation className="h-5 w-5 text-purple-600" />
-                <span className="text-xs text-gray-600">Slides</span>
-              </Button>
-              <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                <Sparkles className="h-5 w-5 text-purple-600" />
-                <span className="text-xs text-gray-600">Deep Research</span>
-              </Button>
-              <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                <BookOpen className="h-5 w-5 text-purple-600" />
-                <span className="text-xs text-gray-600">Blog</span>
-              </Button>
-              <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                <Link2 className="h-5 w-5 text-purple-600" />
-                <span className="text-xs text-gray-600">Link Hub</span>
-              </Button>
+                    {/* Right - Model Selection */}
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
+                      <SelectTrigger className="w-[180px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent side="top">
+                        <SelectItem value="claude-sonnet-4.5">Claude Sonnet 4.5</SelectItem>
+                        <SelectItem value="gpt-4">GPT-4</SelectItem>
+                        <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
+                        <SelectItem value="deepseek">DeepSeek</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </form>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex items-center justify-center gap-6">
+                <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
+                  <Presentation className="h-5 w-5 text-purple-600" />
+                  <span className="text-xs text-gray-600">{t('main.actions.slides')}</span>
+                </Button>
+                <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  <span className="text-xs text-gray-600">{t('main.actions.research')}</span>
+                </Button>
+                <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
+                  <BookOpen className="h-5 w-5 text-purple-600" />
+                  <span className="text-xs text-gray-600">{t('main.actions.blog')}</span>
+                </Button>
+                <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
+                  <Link2 className="h-5 w-5 text-purple-600" />
+                  <span className="text-xs text-gray-600">{t('main.actions.linkHub')}</span>
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
