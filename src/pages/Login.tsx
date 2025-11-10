@@ -172,28 +172,28 @@ export default function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-[#c7d2fe]/60" />
             <div className="relative flex flex-wrap items-end justify-center gap-4">
               <div className="h-32 w-32 rounded-full bg-white/80 shadow-xl backdrop-blur lg:h-36 lg:w-36">
-                <img
+                {/* <img
                   src="/images/MGXAICharacter.jpg"
                   alt="MGX AI Character 1"
                   loading="lazy"
                   className="h-full w-full object-contain p-4"
-                />
+                /> */}
               </div>
               <div className="h-28 w-28 -translate-y-6 rounded-full bg-white/80 shadow-xl backdrop-blur lg:h-32 lg:w-32">
-                <img
+                {/* <img
                   src="/images/photo1762701759.jpg"
                   alt="MGX AI Character 2"
                   loading="lazy"
                   className="h-full w-full object-contain p-4"
-                />
+                /> */}
               </div>
               <div className="h-32 w-32 rounded-full bg-white/80 shadow-xl backdrop-blur lg:h-36 lg:w-36">
-                <img
+                {/* <img
                   src="/images/photo1762701760.jpg"
                   alt="MGX AI Character 3"
                   loading="lazy"
                   className="h-full w-full object-contain p-4"
-                />
+                /> */}
               </div>
             </div>
           </div>

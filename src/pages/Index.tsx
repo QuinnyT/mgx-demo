@@ -79,8 +79,8 @@ export default function IndexPage() {
     createConversation, 
     sendMessage, 
     setCurrentConversation,
-    deleteConversation,
-    togglePinConversation,
+    // deleteConversation,
+    // togglePinConversation,
     fetchConversations,
   } = useChatStore();
 
@@ -90,9 +90,26 @@ export default function IndexPage() {
   const [promptSubmitting, setPromptSubmitting] = useState(false);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [workMode, setWorkMode] = useState<'team' | 'engineer'>('engineer');
-  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4.5');
+  const [selectedModel, setSelectedModel] = useState('deepseek');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const placeholderOptions = useMemo(() => {
+    const raw = t('main.heroPlaceholderOptions', { returnObjects: true }) as unknown;
+    if (Array.isArray(raw)) {
+      const filtered = raw.filter(
+        (option): option is string => typeof option === 'string' && option.trim().length > 0,
+      );
+      if (filtered.length > 0) {
+        return filtered;
+      }
+    }
+    const fallback = t('main.heroPlaceholder');
+    return fallback ? [fallback] : [];
+  }, [t]);
+  const [placeholderText, setPlaceholderText] = useState('');
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [placeholderCharIndex, setPlaceholderCharIndex] = useState(0);
+  const [isPlaceholderHolding, setIsPlaceholderHolding] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -127,6 +144,55 @@ export default function IndexPage() {
       i18n.off('languageChanged', handleLanguageChanged);
     };
   }, [i18n]);
+
+  useEffect(() => {
+    setPlaceholderText('');
+    setPlaceholderIndex(0);
+    setPlaceholderCharIndex(0);
+    setIsPlaceholderHolding(false);
+  }, [placeholderOptions]);
+
+  useEffect(() => {
+    if (placeholderOptions.length === 0) return;
+
+    if (prompt) {
+      if (placeholderText !== '') {
+        setPlaceholderText('');
+      }
+      return;
+    }
+
+    const current = placeholderOptions[placeholderIndex % placeholderOptions.length];
+
+    if (isPlaceholderHolding) {
+      const holdTimeout = setTimeout(() => {
+        setIsPlaceholderHolding(false);
+        setPlaceholderIndex((prev) => (prev + 1) % placeholderOptions.length);
+        setPlaceholderCharIndex(0);
+        setPlaceholderText('');
+      }, 1500);
+      return () => clearTimeout(holdTimeout);
+    }
+
+    if (placeholderCharIndex < current.length) {
+      const typingTimeout = setTimeout(() => {
+        setPlaceholderText(current.slice(0, placeholderCharIndex + 1));
+        setPlaceholderCharIndex((prev) => prev + 1);
+      }, 40);
+      return () => clearTimeout(typingTimeout);
+    }
+
+    if (placeholderCharIndex >= current.length) {
+      setIsPlaceholderHolding(true);
+    }
+  }, [
+    isPlaceholderHolding,
+    placeholderIndex,
+    placeholderOptions,
+    placeholderText,
+    placeholderCharIndex,
+    prompt,
+  ]);
 
   const handleLanguageChange = (code: string) => {
     i18n.changeLanguage(code);
@@ -199,36 +265,36 @@ export default function IndexPage() {
     }
   };
 
-  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await deleteConversation(id);
-      toast.success('Conversation deleted');
-    } catch (error) {
-      toast.error('Failed to delete conversation');
-      console.error(error);
-    }
-  };
+  // const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   try {
+  //     await deleteConversation(id);
+  //     toast.success('Conversation deleted');
+  //   } catch (error) {
+  //     toast.error('Failed to delete conversation');
+  //     console.error(error);
+  //   }
+  // };
 
-  const handleTogglePin = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await togglePinConversation(id);
-    } catch (error) {
-      toast.error('Failed to pin conversation');
-      console.error(error);
-    }
-  };
+  // const handleTogglePin = async (id: string, e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   try {
+  //     await togglePinConversation(id);
+  //   } catch (error) {
+  //     toast.error('Failed to pin conversation');
+  //     console.error(error);
+  //   }
+  // };
 
-  const pinnedConversations = useMemo(
-    () => conversations.filter((c) => c.pinned),
-    [conversations]
-  );
+  // const pinnedConversations = useMemo(
+  //   () => conversations.filter((c) => c.pinned),
+  //   [conversations]
+  // );
 
-  const recentConversations = useMemo(
-    () => conversations.filter((c) => !c.pinned).slice(0, 10),
-    [conversations]
-  );
+  // const recentConversations = useMemo(
+  //   () => conversations.filter((c) => !c.pinned).slice(0, 10),
+  //   [conversations]
+  // );
 
   if (!initialized) {
     return (
@@ -394,7 +460,7 @@ export default function IndexPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-2" />
-                    {t('nav.signIn')}
+                    {t('nav.signOut')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -584,7 +650,9 @@ export default function IndexPage() {
                       <Input
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        placeholder={t('main.heroPlaceholder')}
+                        placeholder={
+                          placeholderOptions.length === 0 ? t('main.heroPlaceholder') : placeholderText
+                        }
                         disabled={promptSubmitting}
                         className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-base resize-none min-h-[80px]"
                         style={{ minHeight: '80px' }}
@@ -612,15 +680,15 @@ export default function IndexPage() {
                           <DropdownMenuContent align="start">
                             <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                               <FileUp className="h-4 w-4 mr-2" />
-                              上传文件
+                              {t('main.uploadFile')}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => folderInputRef.current?.click()}>
                               <FolderUp className="h-4 w-4 mr-2" />
-                              上传文件夹
+                              {t('main.uploadFolder')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        {/*<Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <ImageIcon className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -629,7 +697,7 @@ export default function IndexPage() {
                         <Button variant="ghost" size="sm" className="h-8 px-2 gap-1 text-xs">
                           <Sparkles className="h-3 w-3" />
                           {t('main.newBadge')}
-                        </Button>
+                        </Button> */}
                       </div>
 
                       {/* Center - Mode Switch */}
