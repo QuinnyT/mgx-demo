@@ -10,10 +10,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-5">
           {/* Logo and Tagline */}
           <div className="md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-6 h-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded"></div>
-              <span className="text-base font-semibold">MGX</span>
-            </div>
+            <Link to="/" className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              MGX
+            </Link>
             <p className="text-sm text-slate-600">
               {t('footer.tagline')}
             </p>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowRight,
@@ -373,10 +373,9 @@ export default function IndexPage() {
         <div className="container mx-auto px-6 py-3 flex items-center justify-between">
           {/* Left - Logo and Navigation */}
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded"></div>
-              <span className="text-base font-semibold">MGX</span>
-            </div>
+            <Link to="/" className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              MGX
+            </Link>
             
             <nav className="hidden md:flex items-center gap-1">
               <Button variant="ghost" size="sm" className="text-sm h-8 px-3">
