@@ -45,7 +45,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      navigate('/chat', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [user, navigate]);
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
       // Note: The user will be redirected to Google's OAuth page
-      // After successful authentication, they'll be redirected back to /chat
+      // After successful authentication, they'll be redirected back to /
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
@@ -118,7 +118,7 @@ export default function LoginPage() {
       }
 
       resetForm();
-      navigate('/chat', { replace: true });
+      navigate('/', { replace: true });
     } catch (error) {
       const fallback = isSignup ? t('auth.messages.signUpError') : t('auth.messages.signInError');
       if (error instanceof Error && error.message) {
