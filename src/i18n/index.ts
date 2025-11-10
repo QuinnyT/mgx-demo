@@ -51,6 +51,42 @@ const resources = {
         likes: 'My Likes',
         viewAll: 'View All',
       },
+      showcase: {
+        title: 'App World',
+        subtitle: 'MGX Team Featured Examples',
+        viewAll: 'View All',
+        tabs: {
+          discover: 'Discover',
+          featured: 'Featured',
+          liked: 'Liked',
+        },
+      },
+      footer: {
+        tagline: 'Build your ideas with intelligent agents',
+        about: {
+          title: 'About',
+          blog: 'Blog',
+        },
+        products: {
+          title: 'Products',
+          pricing: 'Pricing',
+          changelog: 'Changelog',
+          examples: 'Examples',
+          videos: 'Videos',
+          guide: 'Guide',
+        },
+        support: {
+          title: 'Support',
+          helpCenter: 'Help Center',
+          privacy: 'Privacy Policy',
+          terms: 'Terms of Service',
+        },
+        community: {
+          title: 'Community',
+          affiliates: 'Affiliates Program',
+          partners: 'Partners',
+        },
+      },
       auth: {
         dialogTitleSignIn: 'Sign in to MGX',
         dialogTitleSignUp: 'Create your MGX account',
@@ -149,6 +185,42 @@ const resources = {
         likes: 'Mis favoritos',
         viewAll: 'Ver todo',
       },
+      showcase: {
+        title: 'Mundo de Apps',
+        subtitle: 'Ejemplos destacados del equipo MGX',
+        viewAll: 'Ver todo',
+        tabs: {
+          discover: 'Descubrir',
+          featured: 'Destacado',
+          liked: 'Favoritos',
+        },
+      },
+      footer: {
+        tagline: 'Construye tus ideas con agentes inteligentes',
+        about: {
+          title: 'Acerca de',
+          blog: 'Blog',
+        },
+        products: {
+          title: 'Productos',
+          pricing: 'Precios',
+          changelog: 'Registro de cambios',
+          examples: 'Ejemplos',
+          videos: 'Videos',
+          guide: 'Guía',
+        },
+        support: {
+          title: 'Soporte',
+          helpCenter: 'Centro de ayuda',
+          privacy: 'Política de privacidad',
+          terms: 'Términos de servicio',
+        },
+        community: {
+          title: 'Comunidad',
+          affiliates: 'Programa de afiliados',
+          partners: 'Socios',
+        },
+      },
       auth: {
         dialogTitleSignIn: 'Inicia sesión en MGX',
         dialogTitleSignUp: 'Crea tu cuenta MGX',
@@ -228,6 +300,42 @@ const resources = {
         showcase: 'ショーケース',
         likes: 'お気に入り',
         viewAll: 'すべて表示',
+      },
+      showcase: {
+        title: 'アプリワールド',
+        subtitle: 'MGXチームの注目例',
+        viewAll: 'すべて表示',
+        tabs: {
+          discover: 'ディスカバー',
+          featured: '注目',
+          liked: 'お気に入り',
+        },
+      },
+      footer: {
+        tagline: 'インテリジェントエージェントでアイデアを構築',
+        about: {
+          title: '概要',
+          blog: 'ブログ',
+        },
+        products: {
+          title: '製品',
+          pricing: '料金',
+          changelog: '変更履歴',
+          examples: '例',
+          videos: 'ビデオ',
+          guide: 'ガイド',
+        },
+        support: {
+          title: 'サポート',
+          helpCenter: 'ヘルプセンター',
+          privacy: 'プライバシーポリシー',
+          terms: '利用規約',
+        },
+        community: {
+          title: 'コミュニティ',
+          affiliates: 'アフィリエイトプログラム',
+          partners: 'パートナー',
+        },
       },
       auth: {
         dialogTitleSignIn: 'MGX にログイン',
@@ -309,6 +417,42 @@ const resources = {
         likes: '내 즐겨찾기',
         viewAll: '모두 보기',
       },
+      showcase: {
+        title: '앱 월드',
+        subtitle: 'MGX 팀 추천 예제',
+        viewAll: '모두 보기',
+        tabs: {
+          discover: '탐색',
+          featured: '추천',
+          liked: '즐겨찾기',
+        },
+      },
+      footer: {
+        tagline: '지능형 에이전트로 아이디어 구축',
+        about: {
+          title: '소개',
+          blog: '블로그',
+        },
+        products: {
+          title: '제품',
+          pricing: '요금제',
+          changelog: '변경 로그',
+          examples: '예제',
+          videos: '비디오',
+          guide: '가이드',
+        },
+        support: {
+          title: '지원',
+          helpCenter: '도움말 센터',
+          privacy: '개인정보 보호정책',
+          terms: '서비스 약관',
+        },
+        community: {
+          title: '커뮤니티',
+          affiliates: '제휴 프로그램',
+          partners: '파트너',
+        },
+      },
       auth: {
         dialogTitleSignIn: 'MGX 로그인',
         dialogTitleSignUp: 'MGX 계정 만들기',
@@ -352,7 +496,7 @@ const resources = {
         launched: '已发布',
         signIn: '登录',
         signUp: '创建账号',
-        brandTag: '限时 21% 折扣，立即抢购！',
+        brandTag: '限时 21% 折扣,立即抢购！',
         brandCta: '立即购买',
         language: '语言',
       },
@@ -388,6 +532,42 @@ const resources = {
         showcase: '展示',
         likes: '我的收藏',
         viewAll: '查看全部',
+      },
+      showcase: {
+        title: '应用世界',
+        subtitle: 'MGX 团队精选案例',
+        viewAll: '查看全部',
+        tabs: {
+          discover: '发现',
+          featured: '精选',
+          liked: '喜欢',
+        },
+      },
+      footer: {
+        tagline: '用智能体构建您的想法',
+        about: {
+          title: '关于',
+          blog: '博客',
+        },
+        products: {
+          title: '产品',
+          pricing: '定价',
+          changelog: '更新日志',
+          examples: '用例',
+          videos: '视频',
+          guide: '操作指南',
+        },
+        support: {
+          title: '支持',
+          helpCenter: '帮助中心',
+          privacy: '隐私策略',
+          terms: '服务条款',
+        },
+        community: {
+          title: '社区',
+          affiliates: '探索者计划',
+          partners: '合作伙伴',
+        },
       },
       auth: {
         dialogTitleSignIn: '登录 MGX',
@@ -461,4 +641,3 @@ export const languageOptions = [
 ];
 
 export default i18n;
-

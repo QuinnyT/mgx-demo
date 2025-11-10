@@ -64,6 +64,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import ShowcaseSection from '@/components/ShowcaseSection';
+import Footer from '@/components/Footer';
 
 export default function IndexPage() {
   const navigate = useNavigate();
@@ -463,133 +465,142 @@ export default function IndexPage() {
           )}
         </aside>
 
-        {/* Main Content Area */}
-        <main className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-4xl flex flex-col h-[calc(100vh-12rem)]">
-            {/* Agent Avatars */}
-            <div className="flex items-center justify-center gap-2 mb-8">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-lg">
-                <span className="text-white text-lg">🐶</span>
+        {/* Main Content Area - Now Scrollable */}
+        <main className="flex-1 overflow-y-auto">
+          {/* Hero Section */}
+          <div className="flex items-center justify-center p-4 min-h-[calc(100vh-12rem)]">
+            <div className="w-full max-w-4xl flex flex-col">
+              {/* Agent Avatars */}
+              <div className="flex items-center justify-center gap-2 mb-8">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-lg">
+                  <span className="text-white text-lg">🐶</span>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-lg">
+                  <span className="text-white text-lg">🐱</span>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-lg">
+                  <span className="text-white text-lg">🐰</span>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center shadow-lg">
+                  <span className="text-white text-lg">🐸</span>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center shadow-lg">
+                  <span className="text-white text-lg">🐷</span>
+                </div>
+                <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 hover:border-gray-400">
+                  <Plus className="h-5 w-5 text-gray-400" />
+                </Button>
               </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-lg">
-                <span className="text-white text-lg">🐱</span>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-lg">
-                <span className="text-white text-lg">🐰</span>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center shadow-lg">
-                <span className="text-white text-lg">🐸</span>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center shadow-lg">
-                <span className="text-white text-lg">🐷</span>
-              </div>
-              <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 hover:border-gray-400">
-                <Plus className="h-5 w-5 text-gray-400" />
-              </Button>
-            </div>
 
-            {/* Title */}
-            <h1 className="text-4xl font-bold text-center mb-8 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              {t('main.heroTitle')}
-            </h1>
+              {/* Title */}
+              <h1 className="text-4xl font-bold text-center mb-8 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                {t('main.heroTitle')}
+              </h1>
 
-            {/* Update Badge */}
-            <div className="flex justify-center mb-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-white/80 px-4 py-2 text-sm shadow-sm">
-                <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
-                  {t('main.badge')}
-                </Badge>
-                <span className="text-gray-700">{t('main.updateTitle')}</span>
+              {/* Update Badge */}
+              <div className="flex justify-center mb-6">
+                <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-white/80 px-4 py-2 text-sm shadow-sm">
+                  <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
+                    {t('main.badge')}
+                  </Badge>
+                  <span className="text-gray-700">{t('main.updateTitle')}</span>
+                </div>
               </div>
-            </div>
 
-            {/* Chat Input Area - Increased Height */}
-            <div className="flex-1 flex flex-col">
-              <div className="bg-white/80 backdrop-blur rounded-3xl shadow-xl border-0 p-6 mb-4">
-                <form onSubmit={handlePromptSubmit} className="space-y-4">
-                  <div className="flex items-start gap-2 p-4 bg-gray-50 rounded-2xl min-h-[120px]">
-                    <Input
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder={t('main.heroPlaceholder')}
-                      disabled={promptSubmitting}
-                      className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-base resize-none min-h-[80px]"
-                      style={{ minHeight: '80px' }}
-                    />
-                    <Button 
-                      type="submit" 
-                      size="icon"
-                      disabled={promptSubmitting || !prompt.trim()}
-                      className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-full mt-2"
-                    >
-                      {promptSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    </Button>
-                  </div>
-
-                  {/* Bottom Toolbar */}
-                  <div className="flex items-center justify-between px-2">
-                    {/* Left - Tools */}
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <ImageIcon className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Database className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-8 px-2 gap-1 text-xs">
-                        <Sparkles className="h-3 w-3" />
-                        {t('main.newBadge')}
+              {/* Chat Input Area - Increased Height */}
+              <div className="flex-1 flex flex-col">
+                <div className="bg-white/80 backdrop-blur rounded-3xl shadow-xl border-0 p-6 mb-4">
+                  <form onSubmit={handlePromptSubmit} className="space-y-4">
+                    <div className="flex items-start gap-2 p-4 bg-gray-50 rounded-2xl min-h-[120px]">
+                      <Input
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        placeholder={t('main.heroPlaceholder')}
+                        disabled={promptSubmitting}
+                        className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-base resize-none min-h-[80px]"
+                        style={{ minHeight: '80px' }}
+                      />
+                      <Button 
+                        type="submit" 
+                        size="icon"
+                        disabled={promptSubmitting || !prompt.trim()}
+                        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-full mt-2"
+                      >
+                        {promptSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       </Button>
                     </div>
 
-                    {/* Center - Mode Switch */}
-                    <Tabs value={workMode} onValueChange={(v) => setWorkMode(v as 'team' | 'engineer')}>
-                      <TabsList className="h-8">
-                        <TabsTrigger value="team" className="text-xs h-7 px-3">Team Mode</TabsTrigger>
-                        <TabsTrigger value="engineer" className="text-xs h-7 px-3">Engineer Mode</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
+                    {/* Bottom Toolbar */}
+                    <div className="flex items-center justify-between px-2">
+                      {/* Left - Tools */}
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <ImageIcon className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Database className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2 gap-1 text-xs">
+                          <Sparkles className="h-3 w-3" />
+                          {t('main.newBadge')}
+                        </Button>
+                      </div>
 
-                    {/* Right - Model Selection */}
-                    <Select value={selectedModel} onValueChange={setSelectedModel}>
-                      <SelectTrigger className="w-[180px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent side="top">
-                        <SelectItem value="claude-sonnet-4.5">Claude Sonnet 4.5</SelectItem>
-                        <SelectItem value="gpt-4">GPT-4</SelectItem>
-                        <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
-                        <SelectItem value="deepseek">DeepSeek</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </form>
-              </div>
+                      {/* Center - Mode Switch */}
+                      <Tabs value={workMode} onValueChange={(v) => setWorkMode(v as 'team' | 'engineer')}>
+                        <TabsList className="h-8">
+                          <TabsTrigger value="team" className="text-xs h-7 px-3">Team Mode</TabsTrigger>
+                          <TabsTrigger value="engineer" className="text-xs h-7 px-3">Engineer Mode</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
 
-              {/* Quick Actions */}
-              <div className="flex items-center justify-center gap-6">
-                <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                  <Presentation className="h-5 w-5 text-purple-600" />
-                  <span className="text-xs text-gray-600">{t('main.actions.slides')}</span>
-                </Button>
-                <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
-                  <span className="text-xs text-gray-600">{t('main.actions.research')}</span>
-                </Button>
-                <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                  <BookOpen className="h-5 w-5 text-purple-600" />
-                  <span className="text-xs text-gray-600">{t('main.actions.blog')}</span>
-                </Button>
-                <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                  <Link2 className="h-5 w-5 text-purple-600" />
-                  <span className="text-xs text-gray-600">{t('main.actions.linkHub')}</span>
-                </Button>
+                      {/* Right - Model Selection */}
+                      <Select value={selectedModel} onValueChange={setSelectedModel}>
+                        <SelectTrigger className="w-[180px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                          <SelectItem value="claude-sonnet-4.5">Claude Sonnet 4.5</SelectItem>
+                          <SelectItem value="gpt-4">GPT-4</SelectItem>
+                          <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
+                          <SelectItem value="deepseek">DeepSeek</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex items-center justify-center gap-6 mb-8">
+                  <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
+                    <Presentation className="h-5 w-5 text-purple-600" />
+                    <span className="text-xs text-gray-600">{t('main.actions.slides')}</span>
+                  </Button>
+                  <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    <span className="text-xs text-gray-600">{t('main.actions.research')}</span>
+                  </Button>
+                  <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
+                    <BookOpen className="h-5 w-5 text-purple-600" />
+                    <span className="text-xs text-gray-600">{t('main.actions.blog')}</span>
+                  </Button>
+                  <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
+                    <Link2 className="h-5 w-5 text-purple-600" />
+                    <span className="text-xs text-gray-600">{t('main.actions.linkHub')}</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Showcase Section */}
+          <ShowcaseSection />
+
+          {/* Footer */}
+          <Footer />
         </main>
       </div>
     </div>
