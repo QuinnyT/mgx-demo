@@ -43,6 +43,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (error) throw error;
       set({ user: data.user });
+    } catch (error) {
+      throw error;
     } finally {
       set({ loading: false });
     }
@@ -62,6 +64,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (error) throw error;
       set({ user: data.user });
+    } catch (error) {
+      throw error;
     } finally {
       set({ loading: false });
     }
@@ -99,6 +103,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       set({ user: null });
+    } catch (error) {
+      throw error;
     } finally {
       set({ loading: false });
     }
