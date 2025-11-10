@@ -110,7 +110,8 @@ export default function IndexPage() {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [placeholderCharIndex, setPlaceholderCharIndex] = useState(0);
   const [isPlaceholderHolding, setIsPlaceholderHolding] = useState(false);
-  
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(72);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -144,6 +145,20 @@ export default function IndexPage() {
       i18n.off('languageChanged', handleLanguageChanged);
     };
   }, [i18n]);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.getBoundingClientRect().height);
+      }
+    };
+
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => {
+      window.removeEventListener('resize', updateHeaderHeight);
+    };
+  }, []);
 
   useEffect(() => {
     setPlaceholderText('');
@@ -369,7 +384,10 @@ export default function IndexPage() {
       )}
 
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur">
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-50 border-b border-white/40 bg-white/50 backdrop-blur-xl supports-[backdrop-filter]:bg-white/50"
+      >
         <div className="container mx-auto px-6 py-3 flex items-center justify-between">
           {/* Left - Logo and Navigation */}
           <div className="flex items-center gap-6">
@@ -482,13 +500,17 @@ export default function IndexPage() {
       </header>
 
       {/* Main Content with Sidebar */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1">
         {/* Sidebar - 与 Chat 页面样式一致 */}
         <aside
           className={cn(
-            'hidden flex-shrink-0 flex-col border-r border-slate-200/60 bg-white/75 backdrop-blur transition-all duration-300 md:flex',
+            'sticky hidden self-start flex-shrink-0 flex-col border-r border-slate-200/60 bg-white/75 backdrop-blur transition-all duration-300 md:flex',
             sidebarCollapsed ? 'w-16' : 'w-72'
           )}
+          style={{
+            top: headerHeight,
+            height: `calc(100vh - ${headerHeight}px)`,
+          }}
         >
           {/* Toggle Button */}
           <div className="flex items-center justify-between border-b border-slate-200/60 p-3 flex-shrink-0">
@@ -578,10 +600,20 @@ export default function IndexPage() {
         </aside>
 
         {/* Main Content Area - Now Scrollable */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1">
           {/* Hero Section */}
           <div className="flex items-center justify-center p-4 min-h-[calc(100vh-12rem)]">
             <div className="w-full max-w-4xl flex flex-col">
+              {/* Update Badge */}
+              <div className="flex justify-center mb-10">
+                <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-white/80 px-4 py-2 text-sm shadow-sm hover:bg-purple-50 cursor-pointer">
+                  <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
+                    {t('main.badge')}
+                  </Badge>
+                  <span className="text-gray-700">{t('main.updateTitle')}</span>
+                </div>
+              </div>
+
               {/* Agent Avatars */}
               <div className="flex items-center justify-center gap-2 mb-8">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-lg">
@@ -609,15 +641,6 @@ export default function IndexPage() {
                 {t('main.heroTitle')}
               </h1>
 
-              {/* Update Badge */}
-              <div className="flex justify-center mb-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-white/80 px-4 py-2 text-sm shadow-sm">
-                  <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
-                    {t('main.badge')}
-                  </Badge>
-                  <span className="text-gray-700">{t('main.updateTitle')}</span>
-                </div>
-              </div>
 
               {/* Chat Input Area - Increased Height */}
               <div className="flex-1 flex flex-col">
@@ -724,23 +747,23 @@ export default function IndexPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="flex items-center justify-center gap-6 mb-8">
-                  <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                    <Presentation className="h-5 w-5 text-purple-600" />
-                    <span className="text-xs text-gray-600">{t('main.actions.slides')}</span>
-                  </Button>
-                  <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                    <Sparkles className="h-5 w-5 text-purple-600" />
-                    <span className="text-xs text-gray-600">{t('main.actions.research')}</span>
-                  </Button>
-                  <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                    <BookOpen className="h-5 w-5 text-purple-600" />
-                    <span className="text-xs text-gray-600">{t('main.actions.blog')}</span>
-                  </Button>
-                  <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto py-2 px-4 hover:bg-white/50">
-                    <Link2 className="h-5 w-5 text-purple-600" />
-                    <span className="text-xs text-gray-600">{t('main.actions.linkHub')}</span>
-                  </Button>
+                <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-700 cursor-pointer hover:bg-slate-100">
+                    <Presentation className="h-4 w-4 text-purple-600" />
+                    <span>{t('main.actions.slides')}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-700 cursor-pointer hover:bg-slate-100">
+                    <Sparkles className="h-4 w-4 text-purple-600" />
+                    <span>{t('main.actions.research')}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-700 cursor-pointer hover:bg-slate-100">
+                    <BookOpen className="h-4 w-4 text-purple-600" />
+                    <span>{t('main.actions.blog')}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-700 cursor-pointer hover:bg-slate-100">
+                    <Link2 className="h-4 w-4 text-purple-600" />
+                    <span>{t('main.actions.linkHub')}</span>
+                  </div>
                 </div>
               </div>
             </div>
