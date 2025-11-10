@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, useRef, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,6 +30,8 @@ import {
   Database,
   Image as ImageIcon,
   Menu,
+  FileUp,
+  FolderUp,
 } from 'lucide-react';
 
 import { LANG_STORAGE_KEY, languageOptions } from '@/i18n';
@@ -90,6 +92,10 @@ export default function IndexPage() {
   const [workMode, setWorkMode] = useState<'team' | 'engineer'>('engineer');
   const [selectedModel, setSelectedModel] = useState('claude-sonnet-4.5');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!initialized) {
@@ -141,6 +147,29 @@ export default function IndexPage() {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files);
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      toast.success(`已上传 ${newFiles.length} 个文件`);
+    }
+  };
+
+  const handleFolderUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files);
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      toast.success(`已上传文件夹，共 ${newFiles.length} 个文件`);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    toast.success('文件已移除');
+  };
+
   const handlePromptSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const value = prompt.trim();
@@ -160,6 +189,7 @@ export default function IndexPage() {
       setCurrentConversation(conversation);
       navigate(`/chat?conversation=${conversation.id}&prompt=${encodeURIComponent(value)}`);
       setPrompt('');
+      setUploadedFiles([]);
     } catch (error) {
       const message = error instanceof Error ? error.message : t('auth.messages.signInError');
       toast.error(message);
@@ -237,6 +267,23 @@ export default function IndexPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        multiple
+        {...({ webkitdirectory: 'true', directory: 'true' } as React.InputHTMLAttributes<HTMLInputElement>)}
+        className="hidden"
+        onChange={handleFolderUpload}
+      />
 
       {/* Promo Banner */}
       {showPromoBanner && (
@@ -511,6 +558,28 @@ export default function IndexPage() {
               <div className="flex-1 flex flex-col">
                 <div className="bg-white/80 backdrop-blur rounded-3xl shadow-xl border-0 p-6 mb-4">
                   <form onSubmit={handlePromptSubmit} className="space-y-4">
+                    {/* Uploaded Files Display */}
+                    {uploadedFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 px-4">
+                        {uploadedFiles.map((file, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm"
+                          >
+                            <Paperclip className="h-3 w-3" />
+                            <span className="max-w-[150px] truncate">{file.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="hover:text-purple-900"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="flex items-start gap-2 p-4 bg-gray-50 rounded-2xl min-h-[120px]">
                       <Input
                         value={prompt}
@@ -534,9 +603,23 @@ export default function IndexPage() {
                     <div className="flex items-center justify-between px-2">
                       {/* Left - Tools */}
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                              <FileUp className="h-4 w-4 mr-2" />
+                              上传文件
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => folderInputRef.current?.click()}>
+                              <FolderUp className="h-4 w-4 mr-2" />
+                              上传文件夹
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <ImageIcon className="h-4 w-4" />
                         </Button>
